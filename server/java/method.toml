@@ -1,0 +1,126 @@
+[[methods]]
+name = "aes128"
+static = true
+# mode:1为加密，2为解密
+code = '''
+public static byte[] aes128(byte[] s, int mode) {
+    try {
+        javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES");
+        c.init(mode, new javax.crypto.spec.SecretKeySpec(base64Decode("${AES_KEY}".getBytes()), "AES"));
+        return c.doFinal(s);
+    } catch(Exception e) {
+        return null;
+    }
+}
+'''
+[methods.imports]
+classes = [
+    "javax.crypto.Cipher",
+    "javax.crypto.spec.SecretKeySpec"
+]
+
+
+[methods.variables]
+AES_KEY = "0J5YM0fKgYVrmMkwTUIF+Q=="
+
+
+
+[[methods]]
+name = "base64Encode"
+static = true
+code = '''
+public static byte[] base64Encode(byte[] bytes) {
+    Class base64;
+    byte[] value = null;
+    try {
+        base64 = Class.forName("java.util.Base64");
+        Object Encoder = base64.getMethod("getEncoder", null).invoke(base64, null);
+        value = (byte[])Encoder.getClass().getMethod("encode", new Class[]{byte[].class}).invoke(Encoder, new Object[]{ bytes });
+    } catch(Exception e) {
+        try {
+            base64 = Class.forName("sun.misc.BASE64Encoder");
+            Object Encoder = base64.newInstance();
+            value = ((String)Encoder.getClass().getMethod("encode", new Class[]{byte[].class}).invoke(Encoder, new Object[]{ bytes })).getBytes();
+        } catch(Exception e2) {}
+    }
+    return value;
+}
+'''
+[methods.variables]
+
+
+
+[[methods]]
+name = "base64Decode"
+static = true
+code = '''
+public static byte[] base64Decode(byte[] bytes){
+        Class base64;
+        byte[] value = null;
+        try{
+            base64 = Class.forName("java.util.Base64");
+            Object decoder = base64.getMethod("getDecoder", null).invoke(base64, null);
+            value =(byte[])decoder.getClass().getMethod("decode", new Class[]{byte[].class}).invoke(decoder, new Object[]{ bytes });
+        } catch(Exception e){
+            try{
+                base64 = Class.forName("sun.misc.BASE64Decoder");
+                Object decoder = base64.newInstance();value =(byte[])decoder.getClass().getMethod("decodeBuffer", new Class[]{String.class}).invoke(decoder, new Object[]{new String( bytes )});
+            } catch(Exception e2){
+
+            }
+        }
+        return value;
+    }
+'''
+[methods.variables]
+
+
+
+
+
+[[methods]]
+name = "unHex"
+static = true
+code = '''
+    public static byte[] unHex(byte[] data){
+        int len = data.length;
+        byte[] out = new byte[len / 2];
+        for (int i = 0, j = 0; j < len; i++) {
+            int f =  Character.digit(data[j++], 16) << 4;
+            f |= Character.digit(data[j++], 16);
+            out[i] = (byte)(f & 0xFF);
+        }
+        return out;
+    }
+'''
+
+[methods.imports]
+classes = [
+    "java.lang.Character"
+]
+
+[methods.variables]
+
+
+
+
+[[methods]]
+name = "xor"
+static = true
+code = '''
+    public static byte[] xor(byte[] data){
+        byte[] key=base64Decode("${Key}".getBytes());
+        int len=data.length;
+        int keyLen=key.length;
+        int index=0;
+        for(int i = 1; i <= len; i++){
+            index=i-1;
+            data[index] =(byte)(data[index]^key[(i%keyLen)]);
+        }
+        return data;
+    }
+'''
+[methods.variables]
+Key = "R84sh+6uJ9oXJpMfw2pc/Q=="
+
+
