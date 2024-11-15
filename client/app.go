@@ -6,12 +6,15 @@ import (
 )
 
 type ClientApp struct {
-	ctx context.Context
+	ctx     context.Context
+	manager *WebShellManger
 }
 
 // 导出方法，ui调用
 func NewClientApp() *ClientApp {
-	return &ClientApp{}
+	return &ClientApp{
+		manager: &WebShellManger{},
+	}
 }
 
 func (a *ClientApp) startup(ctx context.Context) {
@@ -44,4 +47,9 @@ func (a *ClientApp) GetShellList(mode int) []WebShellItem {
 		}
 	}
 	return []WebShellItem{}
+}
+
+// 进入webshell
+func (a *ClientApp) EnterWebShell(item WebShellItem) (int64, error) {
+	return a.manager.EnterShell(item)
 }

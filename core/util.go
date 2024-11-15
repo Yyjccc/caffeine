@@ -69,3 +69,12 @@ func GenerateName() string {
 
 	return classNameBuilder.String()
 }
+
+// 校验是否为某种表达式
+func ValidateExpress(input, sep string) bool {
+	split := strings.Split(input, sep)
+	if len(split) != 2 {
+		return false
+	}
+	return true
+}

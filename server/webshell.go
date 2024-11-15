@@ -4,13 +4,14 @@ package server
 type Encoder interface {
 }
 
-type Decoder interface{}
+type Decoder interface {
+}
 
-// Webshell 通用接口,所有功能
-type WebShell interface {
-	CheckOnline() bool    //检查是否在线
-	GetOsInfo() string    //获取系统信息
-	RunCmd(args []string) //运行cmd
+// 发送到Webshell的数据生成器（不负责加密）
+type WebShellServer interface {
+	CheckOnline() []byte             //检查是否在线
+	GetOsInfo() []byte               //获取系统信息
+	RunCmd(path, args string) []byte //运行cmd
 	//下载，上传文件
 }
 
@@ -23,3 +24,8 @@ type ShellMeta struct {
 	EncodeChain []string
 	DecodeChain []string
 }
+
+type CaffeineServer struct {
+}
+
+//Caffeine端编码和填充数据

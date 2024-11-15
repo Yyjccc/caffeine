@@ -11,18 +11,28 @@ import (
 	"time"
 )
 
+var Http *HttpEngine
+
 //封装http引擎
 
 // HttpRequest 结构体，表示一个HTTP请求
 type HttpRequest struct {
-	ID       int               // 请求的唯一标识符
+	ID       int64             // 请求的唯一标识符
 	Method   string            // 请求方法
 	URL      string            // 请求的URL
 	Headers  map[string]string // 自定义请求头
 	done     bool              // 请求是否已经完成
 	Body     []byte            // 请求体（适用于POST等方法）
-	response *HttpResponse     //响应
-	err      error             //错误
+	Response *HttpResponse     //响应
+	Err      error             //错误
+}
+
+func NewHttpRequest() *HttpRequest {
+	return &HttpRequest{
+		ID:      GenerateID(),
+		Headers: make(map[string]string),
+		done:    false,
+	}
 }
 
 // HttpResponse 结构体，封装HTTP响应，方便解析
@@ -68,6 +78,13 @@ func NewHttpEngine(maxConns, poolSize, maxRetries int) *HttpEngine {
 	return engine
 }
 
+func GetHttpEngine() *HttpEngine {
+	if Http == nil {
+		Http = NewHttpEngine(200, 10, 3)
+	}
+	return Http
+}
+
 // initWorkerPool 初始化协程池
 func (engine *HttpEngine) initWorkerPool() {
 	for i := 0; i < engine.poolSize; i++ {
@@ -80,7 +97,7 @@ func (engine *HttpEngine) worker() {
 	for req := range engine.tasks {
 		engine.wg.Add(1)
 		if err := engine.ExecuteRequest(req); err != nil {
-			req.err = err
+			req.Err = err
 			engine.logger.Warnf("请求 %d 失败: %v", req.ID, err)
 		} else {
 			engine.logger.Debugf("请求 %d 成功:", req.ID)
@@ -123,7 +140,7 @@ func (engine *HttpEngine) ExecuteRequest(req *HttpRequest) error {
 		Headers: resp.Header,
 		Body:    body,
 	}
-	req.response = response
+	req.Response = response
 	req.done = true
 	return nil
 }

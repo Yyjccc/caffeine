@@ -5,6 +5,7 @@ package java
 type Field struct {
 	Name    string
 	Type    string
+	Static  bool
 	Imports Imports `toml:"imports"`
 }
 
