@@ -13,6 +13,8 @@ import (
 	"io"
 )
 
+//加密函数
+
 // 支持的加密方式
 type CryptoAlgorithm string
 

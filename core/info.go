@@ -1,14 +1,15 @@
 package core
 
+// 系统信息
 type SystemInfo struct {
-	FileRoot      string            `json:"fileRoot"`
-	CurrentDir    string            `json:"currentDir"`
-	CurrentUser   string            `json:"currentUser"`
-	ProcessArch   int               `json:"processArch"` //操作系统位数
-	TempDirectory string            `json:"tempDirectory"`
-	IpList        []string          `json:"ipList"`
-	Os            OSInfo            `json:"os"`
-	Env           map[string]string `json:"env"`
+	FileRoot      string                 `json:"fileRoot"`
+	CurrentDir    string                 `json:"currentDir"`
+	CurrentUser   string                 `json:"currentUser"`
+	ProcessArch   int                    `json:"processArch"` //操作系统位数
+	TempDirectory string                 `json:"tempDirectory"`
+	IpList        []string               `json:"ipList"` //ip列表
+	Os            OSInfo                 `json:"os"`
+	Env           map[string]interface{} `json:"env"`
 }
 
 // 操作系统信息

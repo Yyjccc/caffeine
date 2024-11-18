@@ -13,18 +13,20 @@ import (
 
 var Http *HttpEngine
 
-//封装http引擎
+//封装http引擎，生产者消费者模型
 
 // HttpRequest 结构体，表示一个HTTP请求
 type HttpRequest struct {
-	ID       int64             // 请求的唯一标识符
-	Method   string            // 请求方法
-	URL      string            // 请求的URL
-	Headers  map[string]string // 自定义请求头
-	done     bool              // 请求是否已经完成
-	Body     []byte            // 请求体（适用于POST等方法）
-	Response *HttpResponse     //响应
-	Err      error             //错误
+	ID       int64              // 请求的唯一标识符
+	Method   string             // 请求方法
+	URL      string             // 请求的URL
+	Headers  map[string]string  // 自定义请求头
+	done     bool               // 请求是否已经完成
+	Body     []byte             // 请求体（适用于POST等方法）
+	Response *HttpResponse      //响应
+	Err      error              //错误
+	Wg       sync.WaitGroup     // 用于等待请求完成
+	Callback func(*HttpRequest) // 请求完成后的回调函数
 }
 
 func NewHttpRequest() *HttpRequest {
@@ -32,6 +34,7 @@ func NewHttpRequest() *HttpRequest {
 		ID:      GenerateID(),
 		Headers: make(map[string]string),
 		done:    false,
+		Wg:      sync.WaitGroup{},
 	}
 }
 
@@ -102,6 +105,11 @@ func (engine *HttpEngine) worker() {
 		} else {
 			engine.logger.Debugf("请求 %d 成功:", req.ID)
 		}
+		// 调用回调函数（如果存在）
+		if req.Callback != nil {
+			req.Callback(req)
+		}
+		req.Wg.Done()
 		engine.wg.Done()
 	}
 }
@@ -147,7 +155,9 @@ func (engine *HttpEngine) ExecuteRequest(req *HttpRequest) error {
 
 // SubmitRequest 向请求池中添加请求任务
 func (engine *HttpEngine) SubmitRequest(req *HttpRequest) {
+	req.Wg.Add(1)
 	engine.tasks <- req
+	req.Wg.Wait()
 }
 
 // StopAndWait 等待所有请求完成

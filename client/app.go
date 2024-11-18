@@ -48,8 +48,3 @@ func (a *ClientApp) GetShellList(mode int) []WebShellItem {
 	}
 	return []WebShellItem{}
 }
-
-// 进入webshell
-func (a *ClientApp) EnterWebShell(item WebShellItem) (int64, error) {
-	return a.manager.EnterShell(item)
-}

@@ -23,7 +23,7 @@ func NewResponseHandler(config C2Yaml) *ResponseHandler {
 	return handler
 }
 
-func (h *ResponseHandler) Handler(session core.Session, response *core.HttpResponse) ([]byte, error) {
+func (h *ResponseHandler) Handler(session *core.Session, response *core.HttpResponse) ([]byte, error) {
 	if response == nil {
 		return nil, fmt.Errorf("response is nil")
 	}

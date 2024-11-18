@@ -6,6 +6,8 @@ import (
 	"runtime"
 )
 
+//自定义日志
+
 var logger *logrus.Logger
 
 // 定义颜色
@@ -16,6 +18,10 @@ const (
 	Yellow = "\033[33m" // 黄色
 	Blue   = "\033[34m" // 蓝色
 )
+
+func GetLogger() *logrus.Logger {
+	return logger
+}
 
 func init() {
 	logger = logrus.New()
@@ -36,7 +42,7 @@ type CustomFormatter struct{}
 
 func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	// 获取调用栈信息
-	pc, _, line, ok := runtime.Caller(8)
+	pc, _, line, ok := runtime.Caller(7)
 	var funcName string
 	if ok {
 		funcName = runtime.FuncForPC(pc).Name()

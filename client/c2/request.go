@@ -34,7 +34,7 @@ func (h *RequestHandler) parseC2Config(config C2Yaml) {
 
 }
 
-func (h *RequestHandler) Handler(session core.Session, data []byte) (*core.HttpRequest, error) {
+func (h *RequestHandler) Handler(session *core.Session, data []byte) (*core.HttpRequest, error) {
 	//加密
 	var mainData []byte
 	mainData = data

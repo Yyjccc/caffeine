@@ -11,13 +11,3 @@ type WebShellItem struct {
 	URL        string
 	Note       string
 }
-
-type Session struct {
-	ID        int64
-	ShellType string
-	item      WebShellItem
-}
-
-// 缓存
-type ShellCache struct {
-}
