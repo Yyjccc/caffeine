@@ -9,6 +9,7 @@ import (
 
 func main() {
 	myApp := app.New()
+
 	myWindow := myApp.NewWindow("边框布局")
 
 	top := canvas.NewText("顶部栏", color.White)

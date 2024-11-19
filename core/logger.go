@@ -85,3 +85,7 @@ func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	return []byte(logMessage), nil
 }
+
+func AddHook(hook interface{}) {
+	logger.AddHook(hook.(logrus.Hook))
+}

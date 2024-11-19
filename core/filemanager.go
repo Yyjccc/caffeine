@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,7 @@ func (d *Directory) UnmarshalJSON(data []byte) error {
 
 	// 遍历 Directory 中的 Files 字段，初始化每个 FileInfo 的 FilePath
 	for _, file := range d.Files {
+		d.Path = strings.ReplaceAll(d.Path, "\\", "/")
 		file.FilePath = fmt.Sprintf("%s/%s", d.Path, file.Name) // 根据 Directory 的 Path 和 FileName 初始化
 	}
 
@@ -53,6 +55,8 @@ func (d *Directory) UnmarshalJSON(data []byte) error {
 }
 
 func NewDirectory(path string) *Directory {
+	//统一文件分割符
+	path = strings.ReplaceAll(path, "\\", "/")
 	dirName := filepath.Base(path)
 	return &Directory{
 		Name: dirName,
@@ -70,6 +74,7 @@ type FileSystemCache struct {
 }
 
 func NewFileSystem(path string) *FileSystemCache {
+	path = strings.ReplaceAll(path, "\\", "/")
 	fileSystem := &FileSystemCache{
 		LoadedDirectories: make(map[string]*Directory),
 		Path:              path,
@@ -92,6 +97,7 @@ func (f *FileSystemCache) CacheLoadedDir(dir *Directory) {
 
 // GetDirectory 根据路径获取Directory对象
 func (f *FileSystemCache) GetDirectory(path string) *Directory {
+	path = strings.ReplaceAll(path, "\\", "/")
 	if path == "." {
 		path = f.Current.Path
 	}
@@ -105,6 +111,7 @@ func (f *FileSystemCache) GetDirectory(path string) *Directory {
 
 // GetFile  从缓存中读取file
 func (f *FileSystemCache) GetFile(filePath string) *FileInfo {
+	filePath = strings.ReplaceAll(filePath, "\\", "/")
 	dirPath := filepath.Dir(filePath)
 	directory := f.GetDirectory(dirPath)
 	if !directory.Init {
@@ -117,4 +124,13 @@ func (f *FileSystemCache) GetFile(filePath string) *FileInfo {
 		}
 	}
 	return nil
+}
+
+// 递归删除目录
+func (f *FileSystemCache) RemoveDir(dir *Directory) {
+	for _, subDir := range dir.SubDirectories {
+		f.RemoveDir(subDir)
+		delete(f.LoadedDirectories, subDir.Path)
+	}
+	delete(f.LoadedDirectories, dir.Path)
 }

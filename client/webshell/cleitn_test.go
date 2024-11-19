@@ -37,7 +37,8 @@ func TestFile(t *testing.T) {
 	if err != nil {
 		fmt.Errorf("无法读取文件: %v", err)
 	}
-
+	//设置代理
+	core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
 	var conf c2.C2Yaml
 	err = yaml.Unmarshal(data, &conf)
 	if err != nil {
@@ -53,11 +54,16 @@ func TestFile(t *testing.T) {
 	file := client.session.FileSystem.GetFile("1.php")
 	readFile := client.ReadFile(file)
 	fmt.Println(readFile)
-	client.MakeDir(client.session.FileSystem.Current, "test")
-
-	makeFile := client.MakeFile(client.session.FileSystem.Current, "333.php")
-	if makeFile != nil {
-		client.WriteFile(makeFile, "<?php @phpinfo();?>")
+	dir := client.MakeDir(client.session.FileSystem.Current, "test")
+	if dir != nil {
+		makeFile := client.MakeFile(dir, "333.php")
+		if makeFile != nil {
+			writeFile := client.WriteFile(makeFile, "<?php @phpinfo();?>")
+			fmt.Println(writeFile)
+			client.MakeDir(dir, "1")
+			client.DeleteFile(makeFile)
+			client.DeleteDir(dir)
+		}
 	}
 
 }

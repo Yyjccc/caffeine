@@ -13,8 +13,8 @@ import (
 
 var (
 	mu       sync.Mutex
-	nextID   int64 = 1  // 起始 ID
-	stepSize int64 = 10 // 每次递增的基准步长
+	nextID   int64 = 1 // 起始 ID
+	stepSize int64 = 3 // 每次递增的基准步长
 )
 
 // GenerateID 生成具有随机性的递增 ID

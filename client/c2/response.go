@@ -69,7 +69,7 @@ func (h *ResponseHandler) crypto(CryptoAlgorithm core.CryptoAlgorithm, data []by
 		return crypto, nil
 	case core.RSA:
 		//使用私钥解密
-		return core.SignWithRSA(h.config.Key.RsaPrivateKey, data)
+		return core.DecryptPrivateRSA(h.config.Key.RsaPrivateKey, data)
 	default:
 		return nil, errors.New("crypto algorithm not support")
 	}

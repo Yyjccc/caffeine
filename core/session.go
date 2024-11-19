@@ -1,6 +1,7 @@
 package core
 
 import (
+	"strings"
 	"time"
 )
 
@@ -44,5 +45,5 @@ func (s *Session) GetCurrentDir() string {
 	if s.Info == nil {
 		return "./"
 	}
-	return s.Info.CurrentDir
+	return strings.ReplaceAll(s.Info.CurrentDir, "\\", "/")
 }

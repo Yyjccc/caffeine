@@ -1,5 +1,7 @@
 package core
 
+import "fmt"
+
 // 系统信息
 type SystemInfo struct {
 	FileRoot      string                 `json:"fileRoot"`
@@ -26,6 +28,19 @@ type JavaInfo struct {
 	Home        string
 	LibraryInfo string
 	Version     string
+}
+
+func (s *SystemInfo) String() string {
+	return fmt.Sprintf(`
+根目录: %s
+当前用户: %s
+当前目录: %s
+操作系统信息
+	名称:  %s
+	版本: %s
+	发行版: %s
+ip列表: %v
+`, s.FileRoot, s.CurrentUser, s.CurrentDir, s.Os.Name, s.Os.Version, s.Os.Arch, s.IpList)
 }
 
 //系统信息

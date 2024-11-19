@@ -7,10 +7,12 @@ import (
 	"golang.org/x/sync/semaphore"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
 
+// TODO 添加错误码处理
 var Http *HttpEngine
 
 //封装http引擎，生产者消费者模型
@@ -58,12 +60,20 @@ type HttpEngine struct {
 }
 
 // NewHttpEngine 创建新的HTTP引擎
-func NewHttpEngine(maxConns, poolSize, maxRetries int) *HttpEngine {
+func NewHttpEngine(maxConns, poolSize, maxRetries int, proxyURL string) *HttpEngine {
+
 	transport := &http.Transport{
 		MaxIdleConns:      100,
 		MaxConnsPerHost:   maxConns,
 		IdleConnTimeout:   90 * time.Second,
 		DisableKeepAlives: false,
+	}
+	// 如果设置了代理地址，添加代理配置
+	if proxyURL != "" {
+		proxyFunc := func(_ *http.Request) (*url.URL, error) {
+			return url.Parse(proxyURL)
+		}
+		transport.Proxy = proxyFunc
 	}
 
 	engine := &HttpEngine{
@@ -83,7 +93,7 @@ func NewHttpEngine(maxConns, poolSize, maxRetries int) *HttpEngine {
 
 func GetHttpEngine() *HttpEngine {
 	if Http == nil {
-		Http = NewHttpEngine(200, 10, 3)
+		Http = NewHttpEngine(200, 10, 3, BasicCfg.ProxyURL)
 	}
 	return Http
 }
@@ -103,13 +113,18 @@ func (engine *HttpEngine) worker() {
 			req.Err = err
 			engine.logger.Warnf("请求 %d 失败: %v", req.ID, err)
 		} else {
-			engine.logger.Debugf("请求 %d 成功:", req.ID)
+			if req.Response.code >= 500 {
+				engine.logger.Warnf("请求 %d 失败,响应码：%d", req.ID, req.Response.code)
+			} else {
+				engine.logger.Debugf("请求 %d 成功", req.ID)
+			}
 		}
 		// 调用回调函数（如果存在）
 		if req.Callback != nil {
 			req.Callback(req)
 		}
 		req.Wg.Done()
+
 		engine.wg.Done()
 	}
 }

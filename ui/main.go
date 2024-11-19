@@ -2,6 +2,8 @@ package main
 
 import (
 	"caffeine/client"
+	"caffeine/core"
+	"context"
 	"embed"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -25,7 +27,10 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{239, 239, 239, 1},
-		OnStartup:        app.startup,
+		OnStartup: func(ctx context.Context) {
+			// 初始化日志并将 Wails 上下文传递给它
+			core.AddHook(NewWailsLogHook(ctx))
+		},
 		Bind: []interface{}{
 			app,
 			clientApp,

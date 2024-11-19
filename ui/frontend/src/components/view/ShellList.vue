@@ -1,8 +1,10 @@
 <script lang="ts" setup >
 import {onBeforeUnmount, onMounted, ref} from 'vue';
-import {GetShellList} from "../../../wailsjs/go/client/ClientApp";
-import {client} from "../../../wailsjs/go/models";
-
+import {GetShellID, GetShellList} from "../../../wailsjs/go/client/ClientApp";
+import {client, webshell} from "../../../wailsjs/go/models";
+import {StartWebShell} from '../../../wailsjs/go/main/App'
+import WebClient = webshell.WebClient;
+import {useRouter} from "vue-router";
 let mode =0;
 const empty = ref(true); // 控制是否显示 el-empty
 const shellList =ref([] as client.WebShellItem[]);
@@ -10,6 +12,7 @@ const shellList =ref([] as client.WebShellItem[]);
 const showContextMenu = ref(false);
 const menuX = ref(0);
 const menuY = ref(0);
+const router = useRouter();
 // 处理右键点击事件
 const handleRightClick = (event: MouseEvent) => {
   event.preventDefault(); // 阻止默认的右键菜单
@@ -26,9 +29,19 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 // 处理菜单项点击事件
-const handleMenuAction = (action: string) => {
-  console.log("Selected action:", action);
-  //pass
+const handleMenuAction = async (action: string) => {
+  switch (action) {
+    case "1":
+
+      console.log('进入shell');
+      //启动一个shell;参数省略
+      var shellID = await GetShellID()
+      router.push('/webshell/'+shellID).then(() => {
+        console.log('跳转成功');
+      }).catch((err) => {
+            console.error('跳转失败:', err);
+          });
+  }
   showContextMenu.value = false;
 };
 
@@ -74,7 +87,7 @@ onBeforeUnmount(() => {
       class="context-menu"
       @click="showContextMenu = false">
   <ul class="right_menu">
-    <li @click="handleMenuAction('action1')" >进入shell</li>
+    <li @click="handleMenuAction('1')" >进入shell</li>
     <li @click="handleMenuAction('action2')">编辑数据</li>
     <li @click="handleMenuAction('action2')">虚拟终端</li>
     <li @click="handleMenuAction('action2')">复制URL</li>
