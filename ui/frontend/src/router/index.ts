@@ -4,6 +4,8 @@ import Home from "../components/Home.vue";
 import WebShell from "../components/view/WebShell.vue";
 import FileManger from "../components/menu/FileManger.vue";
 import Terminal from "../components/menu/Terminal.vue";
+import Monitor from "../components/menu/Monitor.vue";
+import Note from "../components/menu/Note.vue";
 
 
 
@@ -18,11 +20,29 @@ const routes = [
                 component: Terminal, // 终端页面组件
                 name: 'terminal'
             },
+            {
+                path: "files",
+                component: FileManger,
+                name: "files"
+            },
+            {
+                path: "home",
+                component: SystemInfo,
+                name: "home"
+            },
+            {
+                path: "monitor",
+                component: Monitor,
+                name: "monitor"
+            },
+            {
+                path: "note",
+                component: Note,
+                name: "note"
+            }
         ]
     },
-    {path: '/webshell/info/:id',component: SystemInfo},
-    {path: '/webshell/file/:id',component: FileManger},
-    //{path: '/webshell/terminal/:id',component: Terminal}
+
 ]
 
 const router = createRouter({

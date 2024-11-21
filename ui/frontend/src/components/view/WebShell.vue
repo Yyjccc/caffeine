@@ -46,20 +46,37 @@ const goToTerminal = () => {
 };
 
 
+const goToFileManger = () => {
+  router.push({ name: 'files', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
+};
+
+const goToHome = () => {
+  router.push({ name: 'home', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
+};
+
+const goToMonitor = () => {
+  router.push({ name: 'monitor', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
+};
+
+const goToNote = () => {
+  router.push({ name: 'note', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
+};
+
+
 </script>
 
 <template>
-  <div class="common-layout">
-    <el-container>
+  <div class="webshell-container">
+    <el-container class="webshell-content">
       <el-aside width="150px">
         <el-menu>
-          <el-menu-item index="1">
+          <el-menu-item index="1" @click="goToHome">
             <template #title>
               <el-icon><House /></el-icon>
               <span>系统信息</span>
             </template>
           </el-menu-item>
-          <el-menu-item index="2">
+          <el-menu-item index="2" @click="goToFileManger">
             <el-icon><FolderOpened /></el-icon>
             <template #title>文件管理</template>
           </el-menu-item>
@@ -67,25 +84,47 @@ const goToTerminal = () => {
             <el-icon><document /></el-icon>
             <template #title>虚拟终端</template>
           </el-menu-item>
-          <el-menu-item index="4">
+          <el-menu-item index="4" @click="goToMonitor">
             <el-icon><Cpu /></el-icon>
             <template #title>系统监测</template>
           </el-menu-item>
-          <el-menu-item index="4">
+          <el-menu-item index="5" @click="goToNote">
             <el-icon><Notebook /></el-icon>
             <template #title>笔记</template>
           </el-menu-item>
         </el-menu>
 
       </el-aside>
-      <el-main>
+      <el-container class="main-container">
         <router-view></router-view>
-      </el-main>
+      </el-container>
     </el-container>
   </div>
 
 </template>
 
 <style scoped>
+.webshell-container {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
 
+.webshell-content {
+  height: 100%;
+  width: 100%;
+}
+
+.main-container {
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.el-menu {
+  height: 100%;
+  border-right: solid 1px #e6e6e6;
+}
 </style>

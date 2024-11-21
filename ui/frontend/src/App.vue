@@ -48,23 +48,63 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="common-layout">
-    <el-container>
-      <el-header>
+  <div class="app-container">
+    <el-container class="main-layout">
+      <el-header height="50px">
         <Header ref="tabBar" />
       </el-header>
-      <el-main>
-        <router-view></router-view>
-        <!-- 传递日志到 LogConsole 组件 -->
-        <LogConsole :logs="logs" :maxLines="100" />
-      </el-main>
+      
+      <el-container class="content-layout">
+        <el-main class="main-content">
+          <router-view></router-view>
+        </el-main>
+        
+        <el-footer height="200px" class="log-footer">
+          <LogConsole :logs="logs" :maxLines="100" />
+        </el-footer>
+      </el-container>
     </el-container>
   </div>
 </template>
 
 <style scoped>
-.main {
-  margin: 0;
+.app-container {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.main-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 重要：允许flex子项收缩 */
+}
+
+.main-content {
+  flex: 1;
   padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.log-footer {
+  padding: 0;
+  border-top: 1px solid #ddd;
+  background-color: #f5f7fa;
+}
+
+:deep(.el-footer) {
+  padding: 0;
+  border-top: 1px solid #ddd;
+  background-color: #f5f7fa;
 }
 </style>

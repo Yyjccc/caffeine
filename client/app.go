@@ -6,6 +6,8 @@ import (
 	"caffeine/core"
 	"context"
 	"fmt"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"time"
@@ -67,7 +69,7 @@ func (a *ClientApp) GetShellID() int64 {
 		fmt.Errorf("无法读取文件: %v", err)
 	}
 	//设置代理
-	core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
+	//core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
 	var conf c2.C2Yaml
 	err = yaml.Unmarshal(data, &conf)
 	if err != nil {
@@ -98,4 +100,25 @@ func (a *ClientApp) Exec(id int64, path, cmd string) string {
 	client := a.manager.clients[id]
 	runCMD := client.RunCMD(path, cmd)
 	return runCMD
+}
+
+// 获取本地系统状态
+func (a *ClientApp) GetLocalSystemMetrics() (*SystemMetric, error) {
+	// 获取CPU使用率
+	cpuPercent, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取内存使用情况
+	memInfo, err := mem.VirtualMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	return &SystemMetric{
+		CPU:    cpuPercent[0],
+		Memory: memInfo.UsedPercent,
+		Time:   time.Now().UnixMilli(),
+	}, nil
 }

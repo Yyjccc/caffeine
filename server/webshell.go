@@ -21,6 +21,13 @@ type FileManager interface {
 	Delete(filepath string) []byte //删除文件或者目录
 }
 
+type Monitor interface {
+	GetNetworkInterfaces() []byte //获取网卡信息
+	GetListeningPorts() []byte    //获取监听的端口
+	GetActiveConnections() []byte //获取活跃的网络连接
+	GetSystemMetrics() []byte     //获取cpu和内存的使用情况
+}
+
 // Webshell 生成器
 type WebShellGenerator interface {
 	Generate(pass string) string //生成webshell

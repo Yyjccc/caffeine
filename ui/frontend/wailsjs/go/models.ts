@@ -1,5 +1,75 @@
 export namespace client {
 	
+	export class Connection {
+	    localAddress: string;
+	    remoteAddress: string;
+	    state: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Connection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.localAddress = source["localAddress"];
+	        this.remoteAddress = source["remoteAddress"];
+	        this.state = source["state"];
+	    }
+	}
+	export class NetworkInterface {
+	    name: string;
+	    ipAddress: string;
+	    macAddress: string;
+	    bytesReceived: number;
+	    bytesSent: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetworkInterface(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.ipAddress = source["ipAddress"];
+	        this.macAddress = source["macAddress"];
+	        this.bytesReceived = source["bytesReceived"];
+	        this.bytesSent = source["bytesSent"];
+	    }
+	}
+	export class Port {
+	    port: number;
+	    protocol: string;
+	    process: string;
+	    state: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Port(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.port = source["port"];
+	        this.protocol = source["protocol"];
+	        this.process = source["process"];
+	        this.state = source["state"];
+	    }
+	}
+	export class SystemMetric {
+	    cpu: number;
+	    memory: number;
+	    time: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SystemMetric(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpu = source["cpu"];
+	        this.memory = source["memory"];
+	        this.time = source["time"];
+	    }
+	}
 	export class WebShellItem {
 	    ID: number;
 	    Location: string;

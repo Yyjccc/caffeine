@@ -9,14 +9,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/echarts": "^4.9.22",
+    "@types/markdown-it": "^14.1.2",
+    "@types/xterm": "^3.0.0",
+    "@vueuse/core": "^11.3.0",
+    "echarts": "^5.5.1",
     "element-plus": "^2.8.7",
+    "highlight.js": "^11.10.0",
+    "markdown-it": "^14.1.0",
     "vue": "^3.2.37",
     "vue-router": "^4.4.5",
+    "vuex": "^4.1.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@babel/types": "^7.18.10",
+    "@types/node": "^22.9.1",
     "@vitejs/plugin-vue": "^3.0.3",
     "typescript": "^5.6.3",
     "vite": "^3.0.7",

@@ -5,6 +5,14 @@ import {core} from '../models';
 
 export function Exec(arg1:number,arg2:string,arg3:string):Promise<string>;
 
+export function GetActiveConnections():Promise<Array<client.Connection>>;
+
+export function GetListeningPorts():Promise<Array<client.Port>>;
+
+export function GetLocalSystemMetrics():Promise<client.SystemMetric>;
+
+export function GetNetworkInterfaces():Promise<Array<client.NetworkInterface>>;
+
 export function GetShellID():Promise<number>;
 
 export function GetShellList(arg1:number):Promise<Array<client.WebShellItem>>;

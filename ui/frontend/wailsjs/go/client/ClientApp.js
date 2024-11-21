@@ -6,6 +6,22 @@ export function Exec(arg1, arg2, arg3) {
   return window['go']['client']['ClientApp']['Exec'](arg1, arg2, arg3);
 }
 
+export function GetActiveConnections() {
+  return window['go']['client']['ClientApp']['GetActiveConnections']();
+}
+
+export function GetListeningPorts() {
+  return window['go']['client']['ClientApp']['GetListeningPorts']();
+}
+
+export function GetLocalSystemMetrics() {
+  return window['go']['client']['ClientApp']['GetLocalSystemMetrics']();
+}
+
+export function GetNetworkInterfaces() {
+  return window['go']['client']['ClientApp']['GetNetworkInterfaces']();
+}
+
 export function GetShellID() {
   return window['go']['client']['ClientApp']['GetShellID']();
 }
