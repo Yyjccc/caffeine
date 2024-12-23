@@ -14,6 +14,7 @@ type Operate struct {
 }
 
 type Target struct {
+	ID       int64
 	ShellURL string
 }
 

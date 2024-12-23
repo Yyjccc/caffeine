@@ -13,12 +13,15 @@ type WebShellServer interface {
 // 文件管理功能
 type FileManager interface {
 	LoadDir(path string) []byte          //加载目录,输出json数据，对应core.Directory
-	Download(filepath string) []byte     //下载文件
 	ReadFile(info *core.FileInfo) []byte //读取文件，只支持小文件读取(<100M),请调用前检查
 	MakeDir(path string) []byte          //创建目录,path:新建目录绝对路径
 	MakeFile(filepath string) []byte     //创建文件,filepath:新建文件的绝对路径
 	WriteFile(file *core.FileInfo, data string) []byte
-	Delete(filepath string) []byte //删除文件或者目录
+	Delete(filepath string) []byte                                   //删除文件或者目录
+	Download(filepath string) []byte                                 //下载文件
+	DownloadChunk(path string, offset int64, chunkSize int64) []byte //大文件分块传输
+	Upload(filepath string, data string) []byte
+	UploadChunk(path string, fileData string, chunkIndex int, totalChunks int) []byte //大文件上传
 }
 
 type Monitor interface {

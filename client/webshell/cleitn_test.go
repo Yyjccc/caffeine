@@ -38,7 +38,7 @@ func TestFile(t *testing.T) {
 		fmt.Errorf("无法读取文件: %v", err)
 	}
 	//设置代理
-	core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
+	//core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
 	var conf c2.C2Yaml
 	err = yaml.Unmarshal(data, &conf)
 	if err != nil {

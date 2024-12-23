@@ -7,7 +7,7 @@ import WebClient = webshell.WebClient;
 import {useRouter} from "vue-router";
 let mode =0;
 const empty = ref(true); // 控制是否显示 el-empty
-const shellList =ref([] as client.WebShellItem[]);
+const shellList =ref([] as client.ShellEntry[]);
 // 控制菜单位置的状态
 const showContextMenu = ref(false);
 const menuX = ref(0);

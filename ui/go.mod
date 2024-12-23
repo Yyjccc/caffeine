@@ -15,6 +15,8 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/echo/v4 v4.10.2 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
@@ -25,6 +27,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -46,6 +49,8 @@ require (
 	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
+	gorm.io/driver/sqlite v1.5.6 // indirect
+	gorm.io/gorm v1.25.12 // indirect
 )
 
 replace caffeine => ../

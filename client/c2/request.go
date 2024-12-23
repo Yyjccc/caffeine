@@ -35,9 +35,14 @@ func (h *RequestHandler) parseC2Config(config C2Yaml) {
 }
 
 func (h *RequestHandler) Handler(session *core.Session, data []byte) (*core.HttpRequest, error) {
-	//加密
-	var mainData []byte
-	mainData = data
+	// Create new HTTP request with ID
+	req := core.NewHttpRequest()
+	req.URL = session.Target.ShellURL
+	req.Method = h.config.Request.Method
+	req.Headers = make(map[string]string)
+
+	// Apply encryption chain
+	mainData := data
 	var err error
 	for e := h.CryptoChain.Front(); e != nil; e = e.Next() {
 		mainData, err = h.crypto(core.CryptoAlgorithm(e.Value.(string)), mainData)
@@ -46,12 +51,8 @@ func (h *RequestHandler) Handler(session *core.Session, data []byte) (*core.Http
 		}
 	}
 
-	req := core.NewHttpRequest()
-	req.URL = session.Target.ShellURL
-	req.Method = h.config.Request.Method
-	reqConfig := h.config.Request
-	headers := reqConfig.Headers
-	if headers != nil {
+	// Add headers from config
+	if headers := h.config.Request.Headers; headers != nil {
 		for _, header := range headers {
 			split := strings.Split(header, ":")
 			if len(split) == 2 {
@@ -59,18 +60,17 @@ func (h *RequestHandler) Handler(session *core.Session, data []byte) (*core.Http
 			}
 		}
 	}
-	//TODO 随机ua头选择
 
-	//预先分配，减少append使用，提高性能
-	front := reqConfig.FrontPadding
-	back := reqConfig.BackPadding
+	// Build final request body with padding
+	front := h.config.Request.FrontPadding
+	back := h.config.Request.BackPadding
 	body := make([]byte, len(front)+len(mainData)+len(back))
-	// 使用 copy 函数将每部分复制到指定位置
 	offset := 0
 	offset += copy(body[offset:], front)
 	offset += copy(body[offset:], mainData)
 	copy(body[offset:], back)
 	req.Body = body
+
 	return req, nil
 }
 

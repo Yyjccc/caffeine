@@ -6,16 +6,23 @@ import (
 	"caffeine/core"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"time"
+
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"time"
 )
 
+// TerminalManager 终端管理器
+type TerminalManager struct {
+	terminals map[int64]*webshell.Terminal
+}
+
 type ClientApp struct {
-	ctx     context.Context
-	manager *WebShellManger
+	ctx             context.Context
+	manager         *WebShellManger
+	terminalManager *TerminalManager
 }
 
 // 导出方法，ui调用
@@ -23,6 +30,9 @@ func NewClientApp() *ClientApp {
 	return &ClientApp{
 		manager: &WebShellManger{
 			clients: make(map[int64]*webshell.WebClient),
+		},
+		terminalManager: &TerminalManager{
+			terminals: make(map[int64]*webshell.Terminal),
 		},
 	}
 }
@@ -32,11 +42,11 @@ func (a *ClientApp) startup(ctx context.Context) {
 }
 
 // 获取shell列表
-func (a *ClientApp) GetShellList(mode int) []WebShellItem {
+func (a *ClientApp) GetShellList(mode int) []ShellEntry {
 	if mode == 0 {
 		//本地模式
-		return []WebShellItem{
-			WebShellItem{
+		return []ShellEntry{
+			ShellEntry{
 				ID:         0,
 				URL:        "http://127.0.0.1/shell.jsp",
 				IP:         "127.0.0.1",
@@ -46,7 +56,7 @@ func (a *ClientApp) GetShellList(mode int) []WebShellItem {
 				UpdateTime: time.Now().Format("2006-01-02"),
 				ShellType:  "java",
 			},
-			WebShellItem{
+			ShellEntry{
 				ID:         1,
 				URL:        "http://127.0.0.1:7878/shell.php",
 				IP:         "127.0.0.1",
@@ -58,7 +68,7 @@ func (a *ClientApp) GetShellList(mode int) []WebShellItem {
 			},
 		}
 	}
-	return []WebShellItem{}
+	return []ShellEntry{}
 }
 
 // 进入shell
@@ -92,7 +102,7 @@ func (a *ClientApp) TestConnect(id int64) bool {
 func (a *ClientApp) InitShell(id int64) *core.SystemInfo {
 	client := a.manager.clients[id]
 	client.GetSystemInfo()
-	client.LoadDir(client.GetSession().GetCurrentDir())
+	//	client.LoadDir(client.GetSession().GetCurrentDir())
 	return client.GetSession().Info
 }
 
@@ -121,4 +131,120 @@ func (a *ClientApp) GetLocalSystemMetrics() (*SystemMetric, error) {
 		Memory: memInfo.UsedPercent,
 		Time:   time.Now().UnixMilli(),
 	}, nil
+}
+
+// CreateTerminal 创建新终端
+func (a *ClientApp) CreateTerminal(shellID int64) (*webshell.TerminalInfo, error) {
+	client := a.manager.clients[shellID]
+	if client == nil {
+		return nil, fmt.Errorf("shell client not found: %d", shellID)
+	}
+
+	terminal := webshell.NewTerminal(client, client.GetSession().GetCurrentDir())
+	a.terminalManager.terminals[terminal.ID] = terminal
+
+	return terminal.GetTerminalInfo(), nil
+}
+
+// ExecuteCommand 执行终端命令
+func (a *ClientApp) ExecuteCommand(terminalID int64, command string) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return "Terminal not found"
+	}
+
+	return terminal.Execute(command)
+}
+
+// GetPreviousCommand 获取历史命令
+func (a *ClientApp) GetPreviousCommand(terminalID int64) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return ""
+	}
+
+	return terminal.GetPreviousCommand()
+}
+
+// GetNextCommand 获取下一条历史命令
+func (a *ClientApp) GetNextCommand(terminalID int64) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return ""
+	}
+
+	return terminal.GetNextCommand()
+}
+
+// GetTerminalPrompt 获取终端提示符
+func (a *ClientApp) GetTerminalPrompt(terminalID int64) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return "$ "
+	}
+
+	return terminal.GetPrompt()
+}
+
+// GetTerminalInfo 获取终端信息
+func (a *ClientApp) GetTerminalInfo(terminalID int64) *webshell.TerminalInfo {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return nil
+	}
+
+	return terminal.GetTerminalInfo()
+}
+
+// CloseTerminal 关闭终端
+func (a *ClientApp) CloseTerminal(terminalID int64) error {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return fmt.Errorf("terminal not found: %d", terminalID)
+	}
+
+	delete(a.terminalManager.terminals, terminalID)
+	return nil
+}
+
+// ListTerminals 列出所有终端
+func (a *ClientApp) ListTerminals() []*webshell.TerminalInfo {
+	terminals := make([]*webshell.TerminalInfo, 0)
+	for _, term := range a.terminalManager.terminals {
+		terminals = append(terminals, term.GetTerminalInfo())
+	}
+	return terminals
+}
+
+// GetTerminalWelcomeMessage 获取终端欢迎信息
+func (a *ClientApp) GetTerminalWelcomeMessage(terminalID int64) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return "Terminal not found"
+	}
+
+	return terminal.GetWelcomeMessage()
+}
+
+// SetTerminalEnvironment 设置终端环境变量
+func (a *ClientApp) SetTerminalEnvironment(terminalID int64, key, value string) {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal != nil {
+		terminal.SetEnvironmentVariable(key, value)
+	}
+}
+
+// GetTerminalEnvironment 获取终端环境变量
+func (a *ClientApp) GetTerminalEnvironment(terminalID int64, key string) string {
+	terminal := a.terminalManager.terminals[terminalID]
+	if terminal == nil {
+		return ""
+	}
+
+	return terminal.GetEnvironmentVariable(key)
+}
+
+// AddNewShell 添加新的WebShell记录
+func (a *ClientApp) AddNewShell(data map[string]interface{}) (int64, error) {
+	return a.manager.AddNewShell(data)
 }
