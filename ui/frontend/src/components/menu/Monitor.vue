@@ -145,7 +145,13 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import type { EChartOption } from 'echarts'
-import { GetLocalSystemMetrics, GetNetworkInterfaces, GetListeningPorts, GetActiveConnections } from '../../../wailsjs/go/client/ClientApp'
+import {
+  GetActiveConnections,
+  GetListeningPorts,
+  GetLocalSystemMetrics,
+  GetNetworkInterfaces
+} from "../../../bindings/caffeine/client/clientapp";
+
 // import type { EChartsOption } from 'echarts'
 
 // 响应式状态

@@ -13,6 +13,7 @@
     "@types/markdown-it": "^14.1.2",
     "@types/xterm": "^3.0.0",
     "@vueuse/core": "^11.3.0",
+    "@wailsio/runtime": "^3.0.0-alpha.36",
     "echarts": "^5.5.1",
     "element-plus": "^2.8.7",
     "highlight.js": "^11.10.0",

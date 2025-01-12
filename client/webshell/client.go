@@ -136,6 +136,7 @@ func (client *WebClient) request(methodName HookMethod, data []byte) []byte {
 		client.errorChan <- fmt.Errorf("%s execute request error: %v", methodName, err)
 	}
 	response, err := client.responseHandler.Handler(client.session, req.Response)
+	client.logger.Debugf("receive data: %s", string(response))
 	if err != nil {
 		client.errorChan <- fmt.Errorf("%s handle response error: %v", methodName, err)
 		return nil
@@ -217,35 +218,36 @@ func (client *WebClient) RunCMD(path, cmd string) string {
 }
 
 // 加载目录
-func (client *WebClient) LoadDir(path string) {
+func (client *WebClient) LoadDir(path string) *core.Directory {
 	if path == CurrentDir {
 		path = client.session.GetCurrentDir()
 	}
 
 	// Check cache first
-	cacheManager := core.GetCacheManager()
-	if dir, err := cacheManager.GetDirectory(path); err == nil {
-		client.session.FileSystem.CacheLoadedDir(dir)
-		return
-	}
+	// cacheManager := core.GetCacheManager()
+	//if dir, err := cacheManager.GetDirectory(path); err == nil {
+	//	client.session.FileSystem.CacheLoadedDir(dir)
+	//	return nil
+	//}
 
 	LoadData := client.server.LoadDir(path)
 	response := client.request(HookLoadDir, LoadData)
 	if response == nil {
-		return
+		return nil
 	}
 	var dir core.Directory
 	err := json.Unmarshal(response, &dir)
 	if err != nil {
-		client.errorChan <- fmt.Errorf("LoadDir json unmarshal error: %v", err)
+		client.errorChan <- fmt.Errorf("LoadDir json unmarshal error: %v;data:%s", err, response)
 	}
 	dir.Init = true
 
 	// Save to cache
-	cacheManager.SaveDirectory(&dir)
+	//cacheManager.SaveDirectory(&dir)
 
 	client.session.FileSystem.CacheLoadedDir(&dir)
 	client.session.AddOperateHistory(core.GetCallerName(), []string{path})
+	return &dir
 }
 
 // 读取文件
@@ -415,6 +417,7 @@ func (client *WebClient) UploadFile(localPath string, remotePath string) error {
 // DownloadFile 实现文件下载功能
 // remotePath: 远程文件路径
 // localPath: 本地保存路径
+// 以文件读取的方式读取
 func (client *WebClient) DownloadFile(remotePath string, localPath string) error {
 	// 先获取文件信息
 	downloadData := client.server.Download(remotePath)

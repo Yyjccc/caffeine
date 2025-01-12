@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {inject, onMounted, ref} from "vue";
+import {inject, onBeforeUnmount, onMounted, ref} from "vue";
 import {useRoute, useRouter} from "vue-router";
-import {InitShell, TestConnect} from "../../../wailsjs/go/client/ClientApp";
+
 import { ElIcon } from 'element-plus';
 import {
   Document,
@@ -10,8 +10,9 @@ import {
   FolderOpened,
     Notebook,
 } from '@element-plus/icons-vue'
-import {core} from "../../../wailsjs/go/models";
-import SystemInfo = core.SystemInfo;
+import {SystemInfo} from "../../../bindings/caffeine/core";
+import {InitShell, TestConnect} from "../../../bindings/caffeine/client/clientapp";
+import store from "../../utils/store";
 interface TabBar {
   addTab: (name: string, path: string) => void;
 }
@@ -40,6 +41,11 @@ onMounted(async () => {
   infoRef.value=systemInfo.value.currentDir
 });
 
+onBeforeUnmount(() => {
+  // 在组件卸载时删除对应的会话
+  store.dispatch('deleteSession', id);
+});
+
 // 跳转到终端页面并传递SystemInfo对象
 const goToTerminal = () => {
   router.push({ name: 'terminal', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
@@ -62,7 +68,9 @@ const goToNote = () => {
   router.push({ name: 'note', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
 };
 
-
+const goToOther = () => {
+  router.push({ name: 'other', params: { id: id }, query: { systemInfo: JSON.stringify(systemInfo.value) } });
+};
 </script>
 
 <template>
@@ -92,11 +100,17 @@ const goToNote = () => {
             <el-icon><Notebook /></el-icon>
             <template #title>笔记</template>
           </el-menu-item>
+          <el-menu-item index="6" @click="goToOther">
+            <el-icon><Notebook /></el-icon>
+            <template #title>其他</template>
+          </el-menu-item>
         </el-menu>
 
       </el-aside>
       <el-container class="main-container">
+        <keep-alive >
         <router-view></router-view>
+        </keep-alive>
       </el-container>
     </el-container>
   </div>

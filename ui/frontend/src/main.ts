@@ -10,3 +10,9 @@ app.use(router)
 app.use(ElementPlus)
 app.use(store, key)
 app.mount('#app')
+
+
+window.addEventListener('beforeunload', () => {
+    // 在浏览器关闭之前触发 Vuex 动作来清理会话
+    store.dispatch('clearSessions');
+});

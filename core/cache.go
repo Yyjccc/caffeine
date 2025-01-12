@@ -165,7 +165,7 @@ func (cm *CacheManager) SaveSystemInfo(info *SystemInfo) error {
 
 	systemInfoCache := SystemInfoCache{
 		ID:            info.ID,
-		FileRoot:      info.FileRoot,
+		FileRoot:      info.CurrentFileRoot,
 		CurrentDir:    info.CurrentDir,
 		CurrentUser:   info.CurrentUser,
 		ProcessArch:   info.ProcessArch,
@@ -217,15 +217,15 @@ func (cm *CacheManager) GetSystemInfo(id int64) (*SystemInfo, error) {
 
 	// Construct SystemInfo
 	info := &SystemInfo{
-		ID:            systemInfoCache.ID,
-		FileRoot:      systemInfoCache.FileRoot,
-		CurrentDir:    systemInfoCache.CurrentDir,
-		CurrentUser:   systemInfoCache.CurrentUser,
-		ProcessArch:   systemInfoCache.ProcessArch,
-		TempDirectory: systemInfoCache.TempDirectory,
-		IpList:        ipList,
-		Os:            osInfo,
-		Env:           envInterface, // Use the converted map
+		ID:              systemInfoCache.ID,
+		CurrentFileRoot: systemInfoCache.FileRoot,
+		CurrentDir:      systemInfoCache.CurrentDir,
+		CurrentUser:     systemInfoCache.CurrentUser,
+		ProcessArch:     systemInfoCache.ProcessArch,
+		TempDirectory:   systemInfoCache.TempDirectory,
+		IpList:          ipList,
+		Os:              osInfo,
+		Env:             envInterface, // Use the converted map
 	}
 
 	// Cache in memory

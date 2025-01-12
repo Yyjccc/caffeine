@@ -1,13 +1,13 @@
 <script lang="ts" setup >
 import {onBeforeUnmount, onMounted, ref} from 'vue';
-import {GetShellID, GetShellList} from "../../../wailsjs/go/client/ClientApp";
-import {client, webshell} from "../../../wailsjs/go/models";
-import {StartWebShell} from '../../../wailsjs/go/main/App'
-import WebClient = webshell.WebClient;
+
+import "../../../bindings/caffeine/client/models"
 import {useRouter} from "vue-router";
+import {ShellEntry} from "../../../bindings/caffeine/client";
+import {GetShellID, GetShellList} from "../../../bindings/caffeine/client/clientapp";
 let mode =0;
 const empty = ref(true); // 控制是否显示 el-empty
-const shellList =ref([] as client.ShellEntry[]);
+const shellList =ref([] as ShellEntry[]);
 // 控制菜单位置的状态
 const showContextMenu = ref(false);
 const menuX = ref(0);

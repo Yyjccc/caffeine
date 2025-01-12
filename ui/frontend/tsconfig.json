@@ -1,26 +1,33 @@
 {
   "compilerOptions": {
+    "allowJs": true,              // 允许导入和编译 JavaScript 文件
+    "checkJs": false,             // 是否检查 JavaScript 文件的类型（false 表示不检查）
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Node",
+    "noImplicitAny": false,          // 禁用对隐式 `any` 类型的错误检查
+    "strictNullChecks": false,       // 关闭严格的 null 检查
+    "skipLibCheck": true,            // 跳过类型库检查
+    //"suppressImplicitAnyIndexErrors": true, // 抑制索引类型隐式 any 的错误
+    "resolveJsonModule": true,        // 支持导入 JSON 文件
     "strict": true,
     "jsx": "preserve",
     "sourceMap": true,
-    "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "lib": [
       "ESNext",
       "DOM"
     ],
-    "skipLibCheck": true
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "src/**/*.js",
+    "bindings/**/*.js"
   ],
   "references": [
     {

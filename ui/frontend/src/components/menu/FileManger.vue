@@ -5,31 +5,30 @@
       <div class="section-header">
         <el-icon><Folder /></el-icon>
         <span>目录列表</span>
-        <el-icon class="collapse-icon"><ArrowLeft /></el-icon>
+        <el-icon class="collapse-icon" @click="toggleCollapse"><ArrowLeft /></el-icon>
       </div>
       <div class="tree-content-wrapper">
         <div class="tree-content" ref="treeContent">
-      <el-tree
-          :data="directoryData"
-          :props="treeProps"
-          accordion
-          :default-checked-keys="[]"
-          :default-expanded-keys="[]"
-          node-key="path"
-          :expand-on-click-node="false"
-          @node-click="handleDirectorySelect"
-          @update:expanded-keys="onExpandChange"
-      >
-        <!-- 自定义树节点图标 -->
-        <template #default="{ node, data }">
-          <span class="custom-tree-node">
-            <el-icon>
-              <component :is="getNodeIcon(data.type)" />
-            </el-icon>
-            <span>{{ node.label }}</span>
-          </span>
-        </template>
-      </el-tree>
+          <el-tree
+            :data="dirTreeRoot"
+            :props="treeProps"
+            accordion
+            :default-checked-keys="[]"
+            :default-expanded-keys="[]"
+            node-key="path"
+            :expand-on-click-node="true"
+            @node-click="handleDirectorySelect"
+            @update:expanded-keys="onExpandChange"
+          >
+            <template #default="{ node, data }">
+              <span class="custom-tree-node">
+                <el-icon>
+                  <component :is="getNodeIcon(data.type)" />
+                </el-icon>
+                <span>{{ node.label }}</span>
+              </span>
+            </template>
+          </el-tree>
         </div>
       </div>
       <!-- 添加水平滚动条 -->
@@ -85,6 +84,7 @@
             <el-icon><Star /></el-icon>
             <span>书签</span>
           </div>
+
         </div>
         <div class="path-navigator">
           <el-input
@@ -102,29 +102,30 @@
       </div>
       <table @contextmenu.prevent="showContextMenu">
         <thead>
-        <tr>
-          <th>名称</th>
-          <th>大小</th>
-          <th>日期</th>
-          <th>权限</th>
-        </tr>
+          <tr>
+            <th>名称</th>
+            <th>大小</th>
+            <th>日期</th>
+            <th>权限</th>
+          </tr>
         </thead>
         <tbody>
-        <tr v-for="(file, index) in currentFiles"
-            :key="file.name"
-            :class="{ 'row-striped': index % 2 === 1, 'selected': selectedFiles.includes(file) }"
-            @click="selectFile(file, $event)"
-            @contextmenu.prevent="showContextMenu($event, file)">
-          <td>
-            <div class="file-item">
-              <el-icon><component :is="getFileIcon(file.type, file.name)" /></el-icon>
-              <span>{{ file.name }}</span>
-            </div>
-          </td>
-          <td>{{ file.size }}</td>
-          <td>{{ file.date }}</td>
-          <td>{{ file.permissions }}</td>
-        </tr>
+          <tr v-for="(file, index) in currentFiles"
+              :key="file.name"
+              :class="{ 'row-striped': index % 2 === 1, 'selected': selectedFiles.includes(file) }"
+              @click="selectFile(file, $event)"
+              @contextmenu.prevent="showContextMenu($event, file)"
+              @dblclick="handleDoubleClick(file)">  <!-- 添加双击事件 -->
+            <td>
+              <div class="file-item">
+                <el-icon><component :is="getFileIcon(file.type, file.name)" /></el-icon>
+                <span>{{ file.name }}</span>
+              </div>
+            </td>
+            <td>{{ formattedSize(file.size)  }}</td>
+            <td>{{ file.date }}</td>
+            <td>{{ file.permissions !== -1 ? file.permissions : ''  }}</td>
+          </tr>
         </tbody>
       </table>
 
@@ -185,6 +186,7 @@
 
 <script lang="ts" setup>
 import {computed, onMounted, onUnmounted, ref} from "vue";
+import {OpenSelectFilePath} from "../../../bindings/ui/app"
 
 import {
   Folder,
@@ -212,6 +214,38 @@ import {
   Operation,
 } from '@element-plus/icons-vue'
 
+import {useRoute} from "vue-router";
+import {Directory, FileSystemCache} from "../../../bindings/caffeine/core";
+import {DownloadFile, GetFileSystem, LoadDirInfo} from "../../../bindings/caffeine/client/clientapp";
+import store from "../../utils/store";
+import {WebShellSession} from "../../utils/session";
+
+
+
+// 定义节点类型接口
+interface DirectoryNode {
+  name: string;
+  type: "folder" | "file";
+  path: string;
+  loaded: boolean;
+  children: DirectoryNode[];
+}
+
+// 定义文件类型接口
+interface FileItem {
+  name: string;
+  size: number;
+  date: string;
+  permissions: number;
+  type: 'file' | 'folder';
+}
+
+const route = useRoute();
+const id = Number(route.params.id);
+
+const fileSystem = ref<FileSystemCache | null>(null);
+const currentPath = ref('C:/'); // 默认路径
+
 const treeContent = ref<HTMLElement | null>(null);
 const scrollThumb = ref<HTMLElement | null>(null);
 let isScrolling = false;
@@ -219,7 +253,6 @@ let startScrollX = 0;
 let startThumbPosition = 0;
 let thumbWidth = ref(50); // 初始滑块宽度
 let thumbPosition = ref(0);
-const currentPath = ref('C:/');
 
 // 右键菜单状态
 const showMenu = ref(false);
@@ -232,13 +265,234 @@ const hasSelection = computed(() => selectedFiles.value.length > 0);
 const canManageFiles = computed(() => true); // 可以基于权限判断
 const canPaste = computed(() => clipboard.value.length > 0);
 
+
+const session = computed(() => store.state.webShellCache.sessions[id] || null)
+
+// 当前显示的文件列表
+const currentFiles = ref<FileItem[]>([
+]);
+// 定义树形组件的属性配置
+const treeProps = {
+  children: 'children',  // 指定子节点字段
+  label: 'name',         // 指定显示名称字段
+  disabled: 'disabled',  // 指定禁用状态字段
+};
+
+//加载目录节点到目录树中(构建父目录节点)
+const loadDirToTree= (currentNode: DirectoryNode)=> {
+
+  const pathParts = currentNode.path
+      .replace(/\\/g, '/')  // 将 Windows 路径中的反斜杠替换为正斜杠
+      .split('/');  // 然后按正斜杠分割路径
+  let dirTree = dirTreeRoot.value;
+  if (!dirTree) {
+    console.error("目录树未初始化");
+    return;
+  }
+  console.log("目录树",dirTree)
+  let parent:DirectoryNode = {
+    name:"/",
+    type:"folder",
+    loaded:false,
+    path:"/",
+    children:[]
+  };
+  for (let i = 0; i < pathParts.length; i++) {
+    //构建根目录
+    const part = pathParts[i];
+    // 查找当前路径部分是否已存在
+    let existingNode:DirectoryNode | undefined
+    if (i===0){
+      existingNode = dirTree.find(node => node.name === part && node.type === "folder" );
+    } else {
+       existingNode = parent.children.find(node => node.name === part && node.type === "folder");
+    }
+    // 如果不存在，则创建新节点
+    if (!existingNode) {
+
+      existingNode = {
+        name: part,
+        type: "folder",
+        path: (pathParts.slice(0, i + 1).join('/')),
+        loaded:false,
+        children: []
+      };
+      if (i==0){
+        //如果是根节点直接添加
+        dirTree.push(existingNode);
+        console.log("添加节点 ",part,parent)
+      }else {
+        parent.children.push(existingNode)
+      }
+
+    }
+    else {
+      //如果是加载目录
+      if (equalPath(currentNode.path,existingNode.path) && !existingNode.loaded){
+        for (const sub of currentNode.children){
+            existingNode.children.push(sub)
+        }
+       // existingNode.loaded=true
+      }
+      //如果存在，加载子目录信息
+    }
+    parent = existingNode
+  }
+  // 如果当前节点是文件，添加它到目录树的最后一级
+  if (currentNode.type === "file") {
+    dirTree.push(currentNode);
+  }
+  dirTreeRoot.value=dirTree
+}
+
+const GetFileInfoFromDir= (directory: Directory):FileItem[] =>{
+  var res :FileItem[] = []
+
+  //转化目录
+  for (const sub of directory.sub) {
+      let dir:FileItem = {
+        name: sub.name,
+        permissions:-1,
+        date:"",
+        size: -1,
+        type: "folder",
+      }
+      res.push(dir)
+  }
+  //转化文件
+  for (const item of directory.files) {
+    let file:FileItem ={
+      name:item.name,
+      date:item.lastModified.replace("T"," ").replace("Z",""),
+      size:item.size,
+      permissions:item.permissions,
+      type:"file",
+    }
+    res.push(file)
+  }
+  return res
+}
+
+// 初始化目录树数据
+const dirTreeRoot = ref<DirectoryNode[]>([]);
+
+// 将后端的 Directory 转换为前端的 DirectoryNode
+const convertToDirectoryNode = (directory: Directory): DirectoryNode => {
+  let children: DirectoryNode[] = [];
+  console.log(directory)
+  if (directory.sub){
+    directory.sub.map(subDir => {
+      children.push({
+        name: subDir.name,
+        path: subDir.path,
+        type: "folder",
+        children:[],
+        loaded: false,
+      })
+    });
+  }
+  return {
+    name: directory.name,
+    type: 'folder',
+    path: directory.path,
+    children: children,
+    loaded:true
+  };
+};
+
+// ui切换到某个路径
+function GotoPath(path:string){
+  var dirNode = getDirNodeFromTree(path);
+  if (dirNode==null){
+    console.error("error dirNode is null,path:",path)
+    return
+  }
+  handleDirectorySelect(dirNode)
+  currentPath.value=normalizePath(path)
+}
+
+//通过路径获取目录节点,递归遍历
+function  getDirNodeFromTree(path:string):DirectoryNode|null{
+  let pathNormal = normalizePath(path)
+  const pathParts = pathNormal.split('/');  // 然后按正斜杠分割路径
+  let parent = dirTreeRoot.value[0];
+  let curNode:DirectoryNode | undefined =undefined;
+  for (let i = 0; i < pathParts.length; i++) {
+    let currentPath = pathParts.slice(0, i + 1).join('/');
+    if (i===0){
+      curNode = dirTreeRoot.value.find(node => equalPath(node.path,currentPath) && node.type === "folder" );
+    }else {
+      curNode = parent.children.find(node => equalPath(node.path,currentPath) && node.type === "folder" );
+
+    }
+    if (!curNode){
+      return null;
+    }
+    parent = curNode;
+    //构建根目录
+  }
+  if (!curNode){
+    return null;
+  }
+  return curNode;
+}
+
+
+function getParentDirectoryPath(filePath: string): string {
+  if (!filePath) return '';
+
+  // 标准化路径，处理不同操作系统的分隔符
+  const normalizedPath = filePath.replace(/\\/g, '/');
+
+  // 移除末尾的斜杠（如果存在）
+  const trimmedPath = normalizedPath.replace(/\/+$/, '');
+
+  // 获取最后一个斜杠的位置
+  const lastSlashIndex = trimmedPath.lastIndexOf('/');
+
+  // 如果没有找到斜杠，则返回空字符串（说明已是根目录）
+  if (lastSlashIndex === -1) return '';
+
+  // 截取到最后一个斜杠之前的部分，即上级目录路径
+  return trimmedPath.substring(0, lastSlashIndex);
+}
+
+// 转换文件大小
+const formattedSize = (bytes: number) => {
+  if (bytes === -1) {
+    return ''
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`
+  } else if (bytes < 1024 ** 2) {
+    return `${(bytes / 1024).toFixed(2)} KB`
+  } else if (bytes < 1024 ** 3) {
+    return `${(bytes / 1024 ** 2).toFixed(2)} MB`
+  } else {
+    return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+  }
+}
+
+const handleDoubleClick = (file:FileItem)=>{
+  if(file.type==="folder"){
+    GotoPath(normalizePath(currentPath.value+"/"+file.name));
+  }
+}
+
 // 添加工具栏按钮处理函数
 const handleNew = () => {
   console.log('新建');
 };
 
+
+
+// 跳转到父级目录
 const handleParent = () => {
-  console.log('跳转到上层目录');
+  var parentDirectoryPath = getParentDirectoryPath(currentPath.value);
+  if (parentDirectoryPath===''){
+    return
+  }
+  GotoPath(parentDirectoryPath);
 };
 
 const handleRefresh = () => {
@@ -295,15 +549,30 @@ onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu);
 });
 
+
+const toggleCollapse=()=>{
+
+}
+
+
+
+
+
 // 菜单项处理函数
 const handleUpload = () => {
   if (!canManageFiles.value) return;
   console.log('上传文件');
 };
 
-const handleDownload = () => {
+const handleDownload = async () => {
   if (!hasSelection.value) return;
-  console.log('下载文件', selectedFiles.value);
+  const file =selectedFiles.value[0]
+  var savePath = await OpenSelectFilePath(file.name);
+  const targetPath=normalizePath(currentPath.value+"/"+file.name)
+  if( savePath!==""){
+    DownloadFile(id,targetPath,savePath)
+  }
+    console.log('下载文件', selectedFiles.value);
 };
 
 const handleCopy = () => {
@@ -354,6 +623,37 @@ const getNodeIcon = (type: string) => {
   }
 }
 
+// 比较路径是否相等
+function equalPath(path1: string, path2: string): boolean {
+  // 将路径标准化并转换为小写
+  const normalizedPath1 = normalizePath(path1).toLowerCase();
+  const normalizedPath2 = normalizePath(path2).toLowerCase();
+  return normalizedPath1 === normalizedPath2;
+}
+
+//标准化路径
+function normalizePath(inputPath: string): string {
+  // 替换所有反斜杠为正斜杠
+  let normalizedPath = inputPath.replace(/\\/g, "/");
+  // 移除多余的斜杠（例如 "C://path//to//file"）
+  normalizedPath = normalizedPath.replace(/\/+/g, "/");
+  // 转换为小写以支持大小写不敏感
+  return normalizedPath.toLowerCase();
+}
+
+// 处理目录点击事件
+const handleDirectorySelect = async (node: DirectoryNode) => {
+  var directory = await LoadDirInfo(id,node.path);
+  var dirNode = convertToDirectoryNode(directory);
+  if(!node.loaded){
+    console.log("加载到目录树：",dirNode)
+    loadDirToTree(dirNode)
+    node.loaded=true
+  }
+  currentPath.value=node.path
+  currentFiles.value=GetFileInfoFromDir(directory)
+};
+
 // 获取文件图标
 const getFileIcon = (type: string, fileName: string) => {
   if (type === 'folder') return Folder
@@ -382,7 +682,7 @@ const getFileIcon = (type: string, fileName: string) => {
 
 // 计算滑块宽度和位置
 const updateScrollbar = () => {
-  if (!treeContent.value) return;
+  if (!treeContent.value || !fileSystem.value) return; // 确保 fileSystem 已初始化
 
   const container = treeContent.value.parentElement;
   if (!container) return;  // 添加空检查
@@ -390,8 +690,9 @@ const updateScrollbar = () => {
   const contentWidth = treeContent.value.scrollWidth;
   const containerWidth = container.clientWidth;
 
-  // 计算滑块宽度
-  thumbWidth.value = Math.max(30, (containerWidth / contentWidth) * containerWidth);
+  // 确保参与运算的变量是 number 类型
+  const calculatedThumbWidth = Math.max(30, (containerWidth / contentWidth) * containerWidth);
+  thumbWidth.value = calculatedThumbWidth;
 
   // 更新滑块位置
   const scrollPercent = treeContent.value.scrollLeft / (contentWidth - containerWidth);
@@ -438,144 +739,6 @@ const stopScrolling = () => {
   window.removeEventListener('mouseup', stopScrolling);
 };
 
-// 监听内容变化
-onMounted(() => {
-  document.addEventListener('click', hideContextMenu);
-  if (treeContent.value) {
-    const observer = new ResizeObserver(() => {
-      updateScrollbar();
-    });
-    observer.observe(treeContent.value);
-  }
-});
-// 定义节点类型接口
-interface DirectoryNode {
-  name: string;
-  type: "disk" | "folder" | "file";
-  path: string; // 文件或目录路径
-  children?: DirectoryNode[]; // 子节点
-}
-
-// 初始化目录树数据
-const directoryData = ref<DirectoryNode[]>([
-  {
-    name: "C:/",
-    type: "disk",
-    path: "C:/",
-    children: [
-      {
-        name: "Android-Tool",
-        type: "folder",
-        path: "C:/Android-Tool",
-        children: [
-          { name: "AndroidKiller4J-Windows", type: "folder", path: "C:/Android-Tool/AndroidKiller4J-Windows" },
-          { name: "android-killer-main", type: "folder", path: "C:/Android-Tool/android-killer-main" },
-          { name: "fridaUiTools_for_window", type: "folder", path: "C:/Android-Tool/fridaUiTools_for_window" },
-        ],
-      },
-      { name: "Docker", type: "folder", path: "C:/Docker" },
-    ],
-  },
-  { name: "D:/", type: "disk", path: "D:/", children: [] },
-]);
-
-// 定义文件类型接口
-interface FileItem {
-  name: string;
-  size: string;
-  date: string;
-  permissions: string;
-  type: 'file' | 'folder';
-}
-
-// 当前显示的文件列表
-const currentFiles = ref<FileItem[]>([
-  {
-    name: "AndroidKiller4J-Windows",
-    size: "0 b",
-    date: "2024-05-14 07:59:20",
-    permissions: "0777",
-    type: "folder",
-  },
-  {
-    name: "android-killer-main",
-    size: "128 Kb",
-    date: "2024-05-14 08:00:15",
-    permissions: "0777",
-    type: "folder",
-  },
-  {
-    name: "fridaUiTools_for_window.zip",
-    size: "440.83 Mb",
-    date: "2024-05-14 08:23:12",
-    permissions: "0666",
-    type: "file",
-  },
-  {
-    name: "example.txt",
-    size: "2.5 Kb",
-    date: "2024-05-14 09:15:00",
-    permissions: "0644",
-    type: "file",
-  }
-]);
-// 定义树形组件的属性配置
-const treeProps = {
-  children: 'children',  // 指定子节点字段
-  label: 'name',         // 指定显示名称字段
-  disabled: 'disabled',  // 指定禁用状态字段
-};
-
-// 处理目录点击事件
-const handleDirectorySelect = (node: DirectoryNode) => {
-  console.log("选择的目录路径:", node.path);
-
-  // 根据选择的目录更新文件列表
-  if (node.path === "C:/Android-Tool") {
-    currentFiles.value = [
-      {
-        name: "AndroidKiller4J-Windows",
-        size: "0 b",
-        date: "2024-05-14 07:59:20",
-        permissions: "0777",
-        type: "folder",
-      },
-      {
-        name: "android-killer-main",
-        size: "128 Kb",
-        date: "2024-05-14 08:00:15",
-        permissions: "0777",
-        type: "folder",
-      },
-      {
-        name: "fridaUiTools_for_window.zip",
-        size: "440.83 Mb",
-        date: "2024-05-14 08:23:12",
-        permissions: "0666",
-        type: "file",
-      }
-    ];
-  } else {
-    // 其他目录的默认文件列表
-    currentFiles.value = [
-      {
-        name: "example.txt",
-        size: "2.5 Kb",
-        date: "2024-05-14 09:15:00",
-        permissions: "0644",
-        type: "file",
-      },
-      {
-        name: "example-folder",
-        size: "--",
-        date: "2024-05-14 09:30:00",
-        permissions: "0755",
-        type: "folder",
-      }
-    ];
-  }
-};
-
 
 // 扩展/收起时更新树的状态
 const onExpandChange = (keys: string[]) => {
@@ -616,6 +779,48 @@ const stopResizing = () => {
   window.removeEventListener("mousemove", onMouseMove);
   window.removeEventListener("mouseup", stopResizing);
 };
+
+
+// 监听内容变化
+onMounted(async () => {
+  document.addEventListener('click', hideContextMenu);
+  if (treeContent.value) {
+    const observer = new ResizeObserver(() => {
+      updateScrollbar();
+    });
+    observer.observe(treeContent.value);
+  }
+  //初始化文件系统
+  fileSystem.value = await GetFileSystem(id)
+  //获取session
+  //var session =await store.dispatch("getSession",id);
+  const session:WebShellSession = await store.dispatch('getSession', id)
+  if (session) {
+    //如果是Windows，添加所有盘符
+    if (session.SystemType ===1){
+      const drivers=session.SystemInfo.fileRoots
+      for (const driver of drivers){
+        dirTreeRoot.value.push(
+            {
+              type:"folder",
+              name: driver,
+              path: driver,
+              loaded:false,
+              children:[],
+            }
+        )
+      }
+    }
+  } else {
+    console.warn('Session not found for id:', id)
+  }
+
+  var currentDir = await LoadDirInfo(id,".");
+  loadDirToTree(convertToDirectoryNode(currentDir))
+  currentFiles.value= GetFileInfoFromDir(currentDir)
+  currentPath.value = currentDir.path
+});
+
 </script>
 
 <style scoped>
@@ -649,7 +854,7 @@ const stopResizing = () => {
 .file-list {
   flex: 1;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;  /* 启用垂直滚动条 */
   display: flex;
   flex-direction: column;
 }
@@ -926,5 +1131,18 @@ td:nth-child(4) {
 
 .file-list tr.selected:hover {
   background-color: #e6f3ff;
+}
+
+.search-input {
+  width: 200px;
+  margin-right: 10px;
+}
+
+.directory-tree {
+  overflow-y: auto;  /* 启用垂直滚动条 */
+}
+
+.tree-content {
+  padding: 10px; /* 添加内边距 */
 }
 </style>

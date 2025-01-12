@@ -21,14 +21,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import {ref, onActivated, onMounted, onBeforeUnmount, nextTick, onDeactivated} from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import type { ITerminalOptions, ITerminalAddon } from 'xterm';
 import 'xterm/css/xterm.css';
 import {useRoute } from "vue-router";
-import {Exec} from "../../../wailsjs/go/client/ClientApp";
+
 import { 
   DocumentCopy, 
   DocumentAdd, 
@@ -37,6 +37,7 @@ import {
   Delete,
   RefreshRight 
 } from '@element-plus/icons-vue'
+import {Exec} from "../../../bindings/caffeine/client/clientapp";
 
 // 定义扩展类型而不是接口
 type ExtendedTerminal = Terminal & {
@@ -316,7 +317,7 @@ const menuItems: IMenuItem[] = [
 // 修改打印欢迎信息函数
 const printWelcomeMessage = (term: ExtendedTerminal): void => {
   term.write('Welcome to Vue Virtual Terminal\r\n');
-  term.write(`Current User: ${currentUser}\r\n`);
+  term.write(`Current User: ${currentUser.value}\r\n`);
   term.write(`Current Directory: ${currentPath.value}\r\n`);
   updatePrompt(term);
 };
@@ -375,6 +376,10 @@ onMounted(async () => {
   window.addEventListener('resize', handleResize);
   window.addEventListener('click', handleClickOutside);
 });
+
+onDeactivated(()=>{
+  console.log("iiiiiiiiiiiiii")
+})
 
 onBeforeUnmount(() => {
   terminals.value.forEach(term => {

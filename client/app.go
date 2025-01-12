@@ -7,11 +7,17 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	App  *ClientApp
+	once = sync.Once{}
 )
 
 // TerminalManager 终端管理器
@@ -21,20 +27,32 @@ type TerminalManager struct {
 
 type ClientApp struct {
 	ctx             context.Context
-	manager         *WebShellManger
+	shellManager    *WebShellManger
 	terminalManager *TerminalManager
+	taskManger      *webshell.TaskManager
 }
 
 // 导出方法，ui调用
-func NewClientApp() *ClientApp {
-	return &ClientApp{
-		manager: &WebShellManger{
-			clients: make(map[int64]*webshell.WebClient),
-		},
-		terminalManager: &TerminalManager{
-			terminals: make(map[int64]*webshell.Terminal),
-		},
-	}
+func GetClientApp() *ClientApp {
+	once.Do(func() {
+		appCli := ClientApp{
+			shellManager: &WebShellManger{
+				clients: make(map[int64]*webshell.WebClient),
+			},
+			terminalManager: &TerminalManager{
+				terminals: make(map[int64]*webshell.Terminal),
+			},
+			taskManger: webshell.NewTaskManager(),
+		}
+		App = &appCli
+		go App.taskManger.ExecuteAll()
+	})
+	return App
+}
+
+func GetWebClient(sessionID int64) *webshell.WebClient {
+	app := GetClientApp()
+	return app.shellManager.clients[sessionID]
 }
 
 func (a *ClientApp) startup(ctx context.Context) {
@@ -88,26 +106,26 @@ func (a *ClientApp) GetShellID() int64 {
 
 	target := core.Target{ShellURL: "http://127.0.0.1/shell/server.php"}
 	client := webshell.NewWebClient(target, conf)
-	a.manager.AddWebShell(client)
+	a.shellManager.AddWebShell(client)
 	return client.ID
 }
 
 // 测试连接
 func (a *ClientApp) TestConnect(id int64) bool {
-	client := a.manager.clients[id]
+	client := a.shellManager.clients[id]
 	return client.CheckConnect()
 }
 
 // 初始化shell,输出系统信息
 func (a *ClientApp) InitShell(id int64) *core.SystemInfo {
-	client := a.manager.clients[id]
+	client := a.shellManager.clients[id]
 	client.GetSystemInfo()
 	//	client.LoadDir(client.GetSession().GetCurrentDir())
 	return client.GetSession().Info
 }
 
 func (a *ClientApp) Exec(id int64, path, cmd string) string {
-	client := a.manager.clients[id]
+	client := a.shellManager.clients[id]
 	runCMD := client.RunCMD(path, cmd)
 	return runCMD
 }
@@ -135,7 +153,7 @@ func (a *ClientApp) GetLocalSystemMetrics() (*SystemMetric, error) {
 
 // CreateTerminal 创建新终端
 func (a *ClientApp) CreateTerminal(shellID int64) (*webshell.TerminalInfo, error) {
-	client := a.manager.clients[shellID]
+	client := a.shellManager.clients[shellID]
 	if client == nil {
 		return nil, fmt.Errorf("shell client not found: %d", shellID)
 	}
@@ -246,5 +264,56 @@ func (a *ClientApp) GetTerminalEnvironment(terminalID int64, key string) string 
 
 // AddNewShell 添加新的WebShell记录
 func (a *ClientApp) AddNewShell(data map[string]interface{}) (int64, error) {
-	return a.manager.AddNewShell(data)
+	return a.shellManager.AddNewShell(data)
+}
+
+func (a *ClientApp) GetFileSystem(shellID int64) core.FileSystemCache {
+	client := a.shellManager.clients[shellID]
+	return *client.GetFileSystem()
+}
+
+// 加载目录信息
+func (a *ClientApp) LoadDirInfo(shellID int64, path string) core.Directory {
+	client := a.getWebshellClient(shellID)
+
+	dir := client.LoadDir(path)
+	if dir == nil {
+		//pass
+		return core.Directory{}
+	}
+	return *dir
+}
+
+//// 加载根目录（Windows下所有盘符）
+//func (a *ClientApp) LoadFileRoots(shellID int64) core.FileInfo {
+//
+//}
+
+// 获取操作的实例
+func (a *ClientApp) getWebshellClient(shellID int64) *webshell.WebClient {
+	return a.shellManager.clients[shellID]
+}
+
+// 下载文件,根据文件大小选择方式
+func (a *ClientApp) DownloadFile(shellID int64, targetPath string, savePath string) string {
+	var task webshell.FileDownloadTask
+	//var info *core.FileInfo
+	client := GetWebClient(shellID)
+
+	//if info.Size > webshell.DefaultChunkSize {
+	//	//分块传输
+	//	//pass
+	//} else {
+	task = webshell.FileDownloadTask{
+		Task:           webshell.NewTaskBase(webshell.TaskDownload),
+		SessionID:      shellID,
+		Client:         client,
+		SavePath:       savePath,
+		DownloadType:   webshell.SiguredSmall,
+		DownloadedSize: 0,
+		TargetPath:     targetPath,
+	}
+	a.taskManger.AddTask(&task)
+	//}
+	return task.ID
 }

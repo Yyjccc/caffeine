@@ -1,66 +1,57 @@
 package main
 
 import (
-	"caffeine/client/c2"
-	"caffeine/client/webshell"
-	"caffeine/core"
-	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"github.com/sirupsen/logrus"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"regexp"
 	runtime2 "runtime"
-
-	"github.com/sirupsen/logrus"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"gopkg.in/yaml.v3"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx *application.App
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
-}
-
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-}
-
-func (a *App) StartWebShell() *webshell.WebClient {
-	data, err := ioutil.ReadFile("../c2.yaml")
-	if err != nil {
-		fmt.Errorf("无法读取文件: %v", err)
+func NewApp(app *application.App) *App {
+	return &App{
+		ctx: app,
 	}
-	//设置代理
-	//core.BasicCfg.ProxyURL = "http://127.0.0.1:8083"
-	var conf c2.C2Yaml
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
-		fmt.Errorf("无法解析 YAML 文件: %v", err)
-	}
-	target := core.Target{ShellURL: "http://127.0.0.1/shell/server.php"}
-	client := webshell.NewWebClient(target, conf)
-	return client
 }
 
-func (a *App) Greet() string {
-	return "hello"
+func (a *App) OpenSelectFilePath(fileName string) string {
+	options := application.SaveFileDialogOptions{
+		CanCreateDirectories:            true,
+		ShowHiddenFiles:                 true,
+		CanSelectHiddenExtension:        true,
+		AllowOtherFileTypes:             true,
+		HideExtension:                   false,
+		TreatsFilePackagesAsDirectories: true,
+		Title:                           "下载文件",
+		Message:                         "选择保存路径",
+		Directory:                       "",
+		Filename:                        fileName,
+		ButtonText:                      "保存",
+		Window:                          a.ctx.CurrentWindow(),
+	}
+	saveFileDialog := application.SaveFileDialogWithOptions(&options)
+	selection, err := saveFileDialog.PromptForSingleSelection()
+	if err != nil {
+		return ""
+	}
+	return selection
 }
 
 // WailsLogHook 用于捕获日志并将其发送到前端
 type WailsLogHook struct {
-	ctx context.Context // Wails 上下文，供事件发送使用
+	app *application.App // Wails 上下文，供事件发送使用
 }
 
 // NewWailsLogHook 创建一个新的 WailsLogHook
-func NewWailsLogHook(ctx context.Context) *WailsLogHook {
-	return &WailsLogHook{ctx: ctx}
+func NewWailsLogHook(app *application.App) *WailsLogHook {
+	return &WailsLogHook{app: app}
 }
 
 // Levels 定义日志级别，返回所有级别
@@ -91,9 +82,11 @@ func (hook *WailsLogHook) Fire(entry *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	//后端另外一个 协程触发
 
 	// 使用 Wails 的事件机制将日志消息发送给前端
-	runtime.EventsEmit(hook.ctx, "log", string(logJSON))
+	//EventsEmit(hook.ctx, "log", string(logJSON))
+	hook.app.EmitEvent("log", string(logJSON))
 	return nil
 }
 
@@ -104,3 +97,8 @@ func cleanLogMessage(log string) string {
 	// 替换所有匹配到的 ANSI 控制符为空字符串
 	return ansiEscapeRegex.ReplaceAllString(log, "")
 }
+
+type TextEdit struct {
+}
+
+type UIWindowManager struct{}

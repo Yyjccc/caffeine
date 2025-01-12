@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElCard, ElDescriptions, ElDescriptionsItem, ElTag } from 'element-plus'
-import { core } from '../../../wailsjs/go/models'
-import SystemInfo = core.SystemInfo
 import { useRoute } from "vue-router"
+import {SystemInfo} from "../../../bindings/caffeine/core";
+import {WebShellSession} from "../../utils/session";
+import store from "../../utils/store";
 
 const systemInfo = ref<SystemInfo>()
 const route = useRoute()
-
+const id = Number(route.params.id);
 // 添加一个格式化 PATH 的函数
 const formatPath = (path: string) => {
   return path.split(';').join(';\n')
@@ -21,6 +22,14 @@ onMounted(() => {
       : route.query.systemInfo
     
     systemInfo.value = data as SystemInfo
+    //创建session
+   var session:WebShellSession={
+      sessionId:id,
+      SystemType:systemInfo.value.systemType,
+      SystemInfo:systemInfo.value
+   }
+    store.dispatch('createSession', session);
+
   } catch (error) {
     console.error('Failed to parse system info:', error)
   }
@@ -51,8 +60,9 @@ onMounted(() => {
         </div>
       </template>
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="根目录">{{ systemInfo?.fileRoot }}</el-descriptions-item>
+        <el-descriptions-item label="当前根目录">{{ systemInfo?.currentFileRoot }}</el-descriptions-item>
         <el-descriptions-item label="当前目录">{{ systemInfo?.currentDir }}</el-descriptions-item>
+        <el-descriptions-item label="所有根目录">{{ systemInfo?.fileRoots }}</el-descriptions-item>
         <el-descriptions-item label="临时目录">{{ systemInfo?.tempDirectory }}</el-descriptions-item>
       </el-descriptions>
     </el-card>

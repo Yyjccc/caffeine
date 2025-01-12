@@ -2,7 +2,8 @@
 import { ref, onMounted, provide } from "vue";
 import Header from "./components/aside/Header.vue";
 import LogConsole from "./components/LogConsole.vue";
-import { EventsOn } from "../wailsjs/runtime";
+import {Events} from  "@wailsio/runtime"
+import {WailsEvent} from "@wailsio/runtime/types/events";
 
 // 定义 tabBar 引用
 const tabBar = ref<{ addTab: (name: string, path: string) => void } | null>(null);
@@ -21,10 +22,10 @@ onMounted(() => {
     console.log("tabBar  bound");
   }
   // 监听 "log" 事件，接收后端 JSON 格式的日志
-  EventsOn("log", (logData: string) => {
+  Events.On("log", (event: WailsEvent) => {
     try {
       // 解析 JSON 数据
-      const parsedLog = JSON.parse(logData);
+      const parsedLog = JSON.parse(event.data);
 
       // 检查必需字段是否存在
       if (parsedLog.level && parsedLog.time && parsedLog.funcName && parsedLog.message) {
@@ -41,7 +42,7 @@ onMounted(() => {
         });
       }
     } catch (error) {
-      console.error("日志解析失败:", error, "原始日志数据:", logData);
+      console.error("日志解析失败:", error, "原始日志数据:", event.data);
     }
   });
 });

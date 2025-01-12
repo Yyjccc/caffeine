@@ -11,19 +11,21 @@ import (
 )
 
 type WebShellManger struct {
-	alive   []int64 // 存放在线shell的ID
-	clients map[int64]*webshell.WebClient
-	entries map[int64]*ShellEntry // 存储 ShellEntry 实体
-	db      *gorm.DB              // 添加数据库实例
+	alive      []int64 // 存放在线shell的ID
+	clients    map[int64]*webshell.WebClient
+	entries    map[int64]*ShellEntry // 存储 ShellEntry 实体
+	db         *gorm.DB              // 添加数据库实例
+	taskManger *webshell.TaskManager
 }
 
 // NewWebShellManager 创建管理器实例
 func NewWebShellManager(db *gorm.DB) *WebShellManger {
 	return &WebShellManger{
-		alive:   make([]int64, 0),
-		clients: make(map[int64]*webshell.WebClient),
-		entries: make(map[int64]*ShellEntry),
-		db:      db,
+		alive:      make([]int64, 0),
+		clients:    make(map[int64]*webshell.WebClient),
+		entries:    make(map[int64]*ShellEntry),
+		db:         db,
+		taskManger: webshell.NewTaskManager(),
 	}
 }
 

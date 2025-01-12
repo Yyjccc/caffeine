@@ -6,13 +6,14 @@ import "fmt"
 type SystemInfo struct {
 	ID int64
 	// 基础信息
-	FileRoot      string `json:"fileRoot"`      // 根目录
-	CurrentDir    string `json:"currentDir"`    // 当前目录
-	CurrentUser   string `json:"currentUser"`   // 当前用户
-	ProcessArch   int    `json:"processArch"`   // 系统位数
-	TempDirectory string `json:"tempDirectory"` // 临时目录
-	Hostname      string `json:"hostname"`      // 主机名
-
+	CurrentFileRoot string   `json:"currentFileRoot"` // 当前根目录
+	FileRoots       []string `json:"fileRoots"`       //所有根目录
+	CurrentDir      string   `json:"currentDir"`      // 当前目录
+	CurrentUser     string   `json:"currentUser"`     // 当前用户
+	ProcessArch     int      `json:"processArch"`     // 系统位数
+	TempDirectory   string   `json:"tempDirectory"`   // 临时目录
+	Hostname        string   `json:"hostname"`        // 主机名
+	SystemType      int      `json:"systemType"`      //操作系统类型：1:Windows,0:Linux,2:Other
 	// 网络信息
 	IpList         []string                `json:"ipList"`         // IP列表
 	NetworkIfaces  map[string]NetIfaceInfo `json:"netIfaces"`      // 网卡信息
@@ -97,7 +98,8 @@ type JavaInfo struct {
 
 func (s *SystemInfo) String() string {
 	return fmt.Sprintf(`
-根目录: %s
+当前根目录: %s
+所有根目录: %v
 当前用户: %s
 当前目录: %s
 操作系统信息
@@ -105,5 +107,5 @@ func (s *SystemInfo) String() string {
 	版本: %s
 	发行版: %s
 ip列表: %v
-`, s.FileRoot, s.CurrentUser, s.CurrentDir, s.Os.Name, s.Os.Version, s.Os.Arch, s.IpList)
+`, s.CurrentFileRoot, s.FileRoots, s.CurrentUser, s.CurrentDir, s.Os.Name, s.Os.Version, s.Os.Arch, s.IpList)
 }
